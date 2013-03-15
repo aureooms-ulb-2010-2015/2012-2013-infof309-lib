@@ -1,0 +1,49 @@
+QComboBox {
+    background: rgb(70, 70, 70);
+    border: 1px solid rgb(95, 95, 95);
+    border-radius: 0px;
+    padding: 1px 18px 1px 3px;
+    min-width: 6em;
+    color: rgb(220, 220, 220);
+    margin: 0 0 0 0;
+}
+
+QComboBox:editable {
+}
+
+QComboBox:!editable {
+}
+
+QComboBox::drop-down:editable {
+}
+
+QComboBox:!editable:on {
+}
+
+QComboBox::drop-down:editable:on {
+}
+
+QComboBox:on { /* shift the text when the popup opens */
+    padding-top: 3px;
+    padding-left: 4px;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 15px;
+    right:3px;
+    border-top-right-radius: 0px; /* same radius as the QComboBox */
+    border-bottom-right-radius: 0px;
+    background:none;
+}
+
+QComboBox::down-arrow {
+    image: url(:/images/arrow-down-inverted.png);
+    height: 10px;
+}
+
+QComboBox::down-arrow:on { /* shift the arrow when popup is open */
+    top: 1px;
+    left: 1px;
+}

@@ -1,0 +1,13 @@
+QAbstractItemView {
+    color: rgb(220, 220, 220);
+    background-color: rgb(195, 95, 95);
+}
+
+QAbstractItemView::item {
+    background-color: rgb(195, 95, 95);
+}
+
+QAbstractItemView::item:hover {
+    background-color: rgb(195, 95, 95);
+    border:0px solid #000;
+}

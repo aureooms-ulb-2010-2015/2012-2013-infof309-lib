@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="pause_icon">img/pause_icon.png</file>
+        <file alias="play_icon">img/play_icon.png</file>
+        <file>qss/QComboBox.qss</file>
+        <file>qss/QComboBoxDropDown.qss</file>
+        <file>qss/timeControlSlider.qss</file>
+        <file>xml/facedata.xml</file>
+        <file>xml/haarcascade_frontalface_alt.xml</file>
+        <file>xml/haarcascade_frontalface_default.xml</file>
+        <file>xml/lpbcascade_frontalface.xml</file>
+        <file>xml/haarcascade_eye_tree_eyeglasses.xml</file>
+    </qresource>
+</RCC>
