@@ -24,13 +24,18 @@ int TargetMatcherV2_BinaryMask::computeScore(const Target::Data &a, const Target
 	cv::absdiff(grey_a,grey_b,diff);
 
 	int score = 0;
-
 	for(int i = 0; i < diff.rows; ++i){
 		for(int j = 0; j < diff.cols; ++j){
-			score -= diff.ptr(i)[j];
+			if(i > diff.rows/4 && i <= diff.rows/4*3 && j > diff.cols/4 && j <= diff.cols/4*3){
+				score -= diff.ptr(i)[j] * 3;
+			}
+			else{
+				score -= diff.ptr(i)[j];
+			}
 		}
 	}
 
 	//std::cout << c << std::endl;
-	return score + 1000000;
+	size_t k = diff.rows*diff.cols;
+	return (100+(double)score/k) * 1000000;
 }

@@ -23,7 +23,6 @@ LIBS += -lv4l2 -lX11
 INCLUDEPATH += /usr/local/lib/
 
 SOURCES += \
-    VideoStreamProcessorV2.cpp \
     VideoStreamProcessor.cpp \
     VideoPlayControlsWidget.cpp \
     TimeDisplayerWidget.cpp \
@@ -54,14 +53,12 @@ SOURCES += \
     Algorithm_FaceDetector_Surf.cpp \
     Algorithm_FaceDetector.cpp \
     Algorithm_EyeFaceDetector.cpp \
-    Algorithm_CustomCondensationV1.cpp \
     Algorithm_Condensation.cpp \
     Algorithm_ColorDetection.cpp \
     Algorithm_BinaryMaskWithOriginalFrame.cpp
 
 HEADERS += \
     VideoStreamReader.h \
-    VideoStreamProcessorV2.h \
     VideoStreamProcessor.h \
     VideoStreamInfo.h \
     VideoPlayControlsWidget.h \
@@ -113,11 +110,16 @@ HEADERS += \
     Algorithm_FaceDetector_Surf.h \
     Algorithm_FaceDetector.h \
     Algorithm_EyeFaceDetector.h \
+    Algorithm_CustomCondensationTemplateV1.h \
     Algorithm_CustomCondensationV1.h \
     Algorithm_CustomCondensation.h \
     Algorithm_Condensation.h \
     Algorithm_ColorDetection.h \
-    Algorithm_BinaryMaskWithOriginalFrame.h
+    Algorithm_BinaryMaskWithOriginalFrame.h \
+    Algorithm_CustomCondensationTemplateV1.h
+
+
+
 unix:!symbian {
     maemo5 {
         target.path = /opt/usr/lib
@@ -147,4 +149,6 @@ OTHER_FILES += \
     xml/haarcascade_frontalface_default.xml \
     xml/haarcascade_frontalface_alt.xml \
     xml/haarcascade_eye_tree_eyeglasses.xml \
-    xml/facedata.xml
+    xml/facedata.xml \
+    README.md \
+    lib309.pro.user

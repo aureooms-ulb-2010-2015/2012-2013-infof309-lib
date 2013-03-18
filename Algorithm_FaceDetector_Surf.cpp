@@ -6,7 +6,7 @@
 #include <iostream>
 
 FaceDetector_Surf::FaceDetector_Surf() {
-    std::string filename = "lpbcascade_frontalface.xml";
+	std::string filename = "xml/lpbcascade_frontalface.xml";
     this->_corner.x=0;
     this->_corner.y=0;
 	if (!this->_classifier.load(filename)) std::cout << "can't load file : " << filename << std::endl;
@@ -67,7 +67,7 @@ void FaceDetector_Surf::process(const cv::Mat &in, cv::Mat &out) {
 bool recognize(const cv::Mat &in, cv::Rect roi) {
 
     bool result= false;
-    cv::Mat image1 = cv::imread("sim.png",0);
+	cv::Mat image1 = cv::imread("data/sim.png",0);
 
     // Prepare the matcher
     RobustMatcher rmatcher;

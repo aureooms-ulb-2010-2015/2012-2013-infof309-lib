@@ -5,10 +5,6 @@
         <file>qss/QComboBox.qss</file>
         <file>qss/QComboBoxDropDown.qss</file>
         <file>qss/timeControlSlider.qss</file>
-        <file>xml/facedata.xml</file>
-        <file>xml/haarcascade_frontalface_alt.xml</file>
-        <file>xml/haarcascade_frontalface_default.xml</file>
-        <file>xml/lpbcascade_frontalface.xml</file>
-        <file>xml/haarcascade_eye_tree_eyeglasses.xml</file>
+        <file>qss/CustomButton.qss</file>
     </qresource>
 </RCC>

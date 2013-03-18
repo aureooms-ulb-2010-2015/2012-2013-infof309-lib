@@ -4,7 +4,7 @@
 #include <ostream>
 
 FaceDetector::FaceDetector(){
-	this->_classifier.load("haarcascade_frontalface_default.xml");
+	this->_classifier.load("xml/haarcascade_frontalface_default.xml");
 }
 
 //void recognize(const cv::Mat &in);

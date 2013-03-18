@@ -3,8 +3,8 @@
 
 
 EyeFaceDetector::EyeFaceDetector() {
-    this->_classifier.load("haarcascade_frontalface_default.xml");
-    this->_eyeClassifier.load("haarcascade_eye_tree_eyeglasses.xml");
+	this->_classifier.load("xml/haarcascade_frontalface_default.xml");
+	this->_eyeClassifier.load("xml/haarcascade_eye_tree_eyeglasses.xml");
 }
 
 
