@@ -1,7 +1,6 @@
 #include "Algorithm_BinaryMaskWithOriginalFrame.h"
 
-BinaryMaskWithOriginalFrame::BinaryMaskWithOriginalFrame(){
-}
+BinaryMaskWithOriginalFrame::BinaryMaskWithOriginalFrame(){}
 
 void BinaryMaskWithOriginalFrame::process(const cv::Mat &in, cv::Mat &out) {
 	this->_mask.process(in,out);
