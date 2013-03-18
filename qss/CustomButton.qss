@@ -1,0 +1,16 @@
+QPushButton {
+    background: rgb(70, 70, 70);
+    border: 1px solid rgb(95, 95, 95);
+    border-radius: 0px;
+    padding: 0px;
+    min-width: 6em;
+    color: rgb(220, 220, 220);
+    margin: 0 0 0 0;
+}
+
+QPushButton:pressed {
+    background: rgb(50, 50, 50);
+    border: 1px solid rgb(70, 70, 70);
+    color: rgb(230, 230, 230);
+    outline: none;
+}
