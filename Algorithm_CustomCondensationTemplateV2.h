@@ -54,16 +54,19 @@ public:
 	typedef std::default_random_engine Generator;
 	typedef int Delta;
 	typedef struct{
-		Delta x, y, w, h;
+		Delta x, y;
 	} Deltas;
 
-	typedef std::vector<double> RefCounter;
+	typedef struct{
+		std::vector<size_t> x;
+		std::vector<size_t> y;
+	} RefCounter;
 
 private:
 
 	Generator generator = Generator(Clock::now().time_since_epoch().count());
 	Targets currentlyTracked;
-	size_t pollingRange = 50;
+	size_t pollingRange = 300;
 	size_t generatingRange = 1;
 	int spreadRange = 20;
 	int minScore = 50;
@@ -73,7 +76,20 @@ private:
 	Densities density;
 	Distances2D distances;
 	RefCounter refCounter;
-	Sub_Tagging tagging;
+
+	AccumulateBackground accumulator;
+	std::vector<std::vector<cv::Point> > contour;
+	std::vector<cv::Vec4i> hierarchy;
+
+	int maxCorners = 10;
+	double qualityLevel = 0.01;
+	double minDistance = 10;
+	cv::InputArray maskArray = cv::noArray();
+	int blockSize = 3;
+	bool useHarrisDetector = false;
+	double k = 0.04;
+
+	cv::Mat grey;
 
 
 public:
@@ -82,6 +98,9 @@ public:
 
 	void process(const cv::Mat &in, cv::Mat &out){
 		out = in.clone();
+		cv::cvtColor(in, grey, CV_BGR2GRAY);
+
+		accumulator.process(in);
 
 		for(Target& target : currentlyTracked){
 			this->ConDensAte(in, out, target);
@@ -100,9 +119,26 @@ public:
 
 private:
 
+	Rects getMovingObjects() {
+
+		cv::findContours(accumulator.getForeground(),
+						 contour,
+						 hierarchy,
+						 CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
+
+
+		Rects rects;
+
+		for(unsigned int i = 0; i< contour.size(); i++ ){
+			rects.push_back(cv::boundingRect(contour.at(i)));
+		}
+
+		return rects;
+	}
+
 	void drawTarget(cv::Mat& out, const Target& target){
 		if(!target.features.empty()){
-			double mean[2] = 0;
+			double mean[2] = {0,0};
 			size_t k = 0;
 			for(const Feature& feature : target.features){
 				cv::circle(out, feature.point, 3, cv::Scalar(0,122,0),-1);
@@ -119,9 +155,9 @@ private:
 		}
 	}
 
-	Points generatePoints(const cv::Mat &in, DiscreteDistributions &distributions){
+	Points generatePoints(DiscreteDistributions &distributions){
 
-		Rects result;
+		Points result;
 		for(size_t i = 0; i < pollingRange; ++i){
 			result.push_back(Point(distributions.x(generator),distributions.y(generator)));
 		}
@@ -147,40 +183,49 @@ private:
 	}
 
 	void ConDensAte(const cv::Mat &in, cv::Mat &out, Target& target){
-		this->initDensity(in);
-
 		for(Feature& feature : target.features){
+			this->initDensity(in);
 			DiscreteDistributions distributions = {
 				DiscreteDistribution(feature.density.x.begin(), feature.density.x.end()),
 				DiscreteDistribution(feature.density.y.begin(), feature.density.y.end())
 			};
 
-			Points points = generatePoints(in, distributions);
+			Points points = generatePoints(distributions);
 
 			std::map<Score, cv::Point> scores;
-			cv::Scalar color = cv::Scalar(0,0,0x80);
 			this->initRefCounter(in);
-			size_t k;
 
 			for(const Point& point : points){
 
-				Distance distance = this->matcher.computeDistance(in, feature.point, point);
-				k = refCounter[point.x]++;
-				distances.x[point.x] = distances.x[point.x]*(k/k+1) + distance/(k+1);
-				k = refCounter[point.y]++;
-				distances.y[point.y] = distances.y[point.y]*(k/k+1) + distance/(k+1); //floating point division
+				Distance distance = this->matcher.computeDistance(grey, feature.point, point);
+				++refCounter.x[point.x];
+				++refCounter.y[point.y];
+				distances.x[point.x] += distance;
+				distances.y[point.y] += distance;
 
-				scores.insert(std::pair<Score, cv::Point>(score, point));
+				scores.insert(std::pair<Score, cv::Point>(distance, point));
 
 				cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
 			}
 
-			for(Distance distance : distances.x){
-				density.x = (distance >= MAX_DIST)? 0 : MAX_DIST - distance;
+			for(size_t i = 0; i < refCounter.x.size(); ++i){
+				if(refCounter.x[i] > 1){
+					distances.x[i] /= refCounter.x[i];
+				}
 			}
 
-			for(Distance distance : distances.y){
-				density.y = (distance >= MAX_DIST)? 0 : MAX_DIST - distance;
+			for(size_t i = 0; i < refCounter.y.size(); ++i){
+				if(refCounter.y[i] > 1){
+					distances.y[i] /= refCounter.y[i];
+				}
+			}
+
+			for(size_t i = 0; i < distances.x.size(); ++i){
+				density.x[i] = (distances.x[i] >= MAX_DIST)? 0 : MAX_DIST - distances.x[i];
+			}
+
+			for(size_t i = 0; i < distances.y.size(); ++i){
+				density.y[i] = (distances.y[i] >= MAX_DIST)? 0 : MAX_DIST - distances.y[i];
 			}
 
 
@@ -194,47 +239,38 @@ private:
 
 	void pollNewTargets(const cv::Mat &in, cv::Mat &out){
 
-		this->initDensity(in);
 
-		Rects rects = tagging.process(in);//generateRects(in);
+		Rects rects = getMovingObjects();
 
-		std::map<int, Rect> scores;
 		cv::Scalar color = cv::Scalar(0,0x80,0);
-		for(Rect rect : rects){
 
-			if(abs(rect.width - model.cols) > 50 || abs(rect.height - model.rows) > 50) continue;
-
-			std::cout << "Matching rect : (" << rect.x << ',' << rect.y << ',' << rect.width << ',' << rect.height << ')' << std::endl;
-
-			int score = this->matcher.computeScore(in(rect), model);
-			density.x[rect.x] += score;
-			density.y[rect.y] += score;
-			density.w[rect.width] += score;
-			density.h[rect.height] += score;
-
-			scores.insert(std::pair<int,Rect>(score, rect));
-
-			cv::rectangle(out, rect, color);
-
-			cv::Point point;
-			point.x = rect.x + rect.width + 10;
-			point.y = rect.y + rect.height + 10;
-
-			std::ostringstream text;
-			text << score;
-			cv::putText(out, text.str(), point, cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, color, 1, CV_AA);
-
-			std::cout << score << std::endl;
-		}
-
-		std::map<int, Rect>::const_reverse_iterator it = scores.rbegin();
-
-		for(size_t i = 0; i < generatingRange && i < scores.size()  ; ++i, ++it){
-			if(it->first < minScore){
-				break;
+		Deltas deltas;
+		deltas.x = 0;
+		deltas.y = 0;
+		for(const Rect& rect : rects){
+			std::vector<cv::Point2f> corners;
+			cv::goodFeaturesToTrack(grey(rect), corners,
+									maxCorners, qualityLevel,
+									minDistance, maskArray,
+									blockSize, useHarrisDetector, k);
+			Target target;
+			target.features.reserve(corners.size());
+			for(Point corner : corners){
+				this->initDensity(in);
+				density.x[corner.x] = 100;
+				density.y[corner.y] = 100;
+				spread(deltas);
+				Feature feature;
+				feature.point = corner;
+				feature.density = density;
+				target.features.push_back(feature);
+				cv::circle(out, feature.point, 3, cv::Scalar(0,0,255),-1);
 			}
-			currentlyTracked.push_back(Target(in, it->second, density));
+
+
+			currentlyTracked.push_back(target);
 			std::cout << "pushed new target" << std::endl;
+			cv::rectangle(out, rect, color);
 		}
 	}
 
@@ -242,16 +278,12 @@ private:
 		Deltas deltas;
 		deltas.x = shift(density.x, prevDensity.x);
 		deltas.y = shift(density.y, prevDensity.y);
-		deltas.w = shift(density.w, prevDensity.w);
-		deltas.h = shift(density.h, prevDensity.h);
 		return deltas;
 	}
 
 	void spread(Deltas deltas){
 		spread(density.x, deltas.x, spreadRange);
 		spread(density.y, deltas.y, spreadRange);
-		spread(density.w, deltas.w, spreadRange);
-		spread(density.h, deltas.h, spreadRange);
 	}
 
 	Delta shift(Density& density, const Density& prevDensity){
