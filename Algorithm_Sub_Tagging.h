@@ -17,8 +17,6 @@ private:
 
 	std::vector<std::vector<cv::Point> > contour;
 	std::vector<cv::Vec4i> hierarchy;
-
-	cv::Size blurRange;
 	AccumulateBackground accumulator;
 
 public:

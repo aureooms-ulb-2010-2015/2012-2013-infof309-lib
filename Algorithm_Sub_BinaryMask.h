@@ -14,15 +14,17 @@ private:
     cv::Mat _bckgrnd;
     cv::Mat _bckgrndImage;
 
+	cv::Size blurRange = cv::Size(16,16);
 
 public:
     Sub_BinaryMask(){}
+	Sub_BinaryMask(cv::Size blurRange):blurRange(blurRange){}
 
 
     void process(const cv::Mat &input, cv::Mat &output){
         // convert input frame to gray-level image and blur it
         cv::cvtColor(input, _gray, CV_BGR2GRAY);
-        cv::blur(_gray, _gray, cv::Size(16,16) );
+		cv::blur(_gray, _gray, blurRange);
         if(_bckgrnd.empty()){
             _gray.convertTo(_bckgrnd,CV_32F);
             _gray.convertTo(_mask, CV_8U);
