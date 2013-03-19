@@ -116,7 +116,11 @@ HEADERS += \
     Algorithm_Condensation.h \
     Algorithm_ColorDetection.h \
     Algorithm_BinaryMaskWithOriginalFrame.h \
-    Algorithm_CustomCondensationTemplateV1.h
+    Algorithm_CustomCondensationTemplateV1.h \
+    Algorithm_CustomCondensationTemplateV2.h \
+    Matcher_GreyLevelDistanceMatcher.h \
+    Target_CondensationTargetV2.h \
+    Algorithm_AccumulateBackground.h
 
 
 
@@ -150,5 +154,4 @@ OTHER_FILES += \
     xml/haarcascade_frontalface_alt.xml \
     xml/haarcascade_eye_tree_eyeglasses.xml \
     xml/facedata.xml \
-    README.md \
-    lib309.pro.user
+    README.md
