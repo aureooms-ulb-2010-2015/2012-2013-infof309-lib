@@ -5,9 +5,6 @@
 #include <opencv2/core/core.hpp>
 
 class Target {
-private:
-    std::string _id;
-    static uint32_t NEXT_ID;
 
 public:
     int x;
@@ -18,11 +15,10 @@ public:
     cv::Mat model;
 	cv::Rect rect;
 	int age;
+	size_t tid;
 
 	Target(cv::Rect);
 	Target(int, int, cv::Scalar, cv::Mat);
-
-    std::string getId() { return this->_id; }
 
 };
 
