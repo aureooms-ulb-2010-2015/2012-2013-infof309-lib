@@ -40,6 +40,8 @@ NetworkStreamInputDialog::NetworkStreamInputDialog(QWidget *parent) :
 
 	QObject::connect(this->_confirmButton, SIGNAL(clicked()), this, SLOT(accept()));
 	QObject::connect(this->_cancelButton, SIGNAL(clicked()), this, SLOT(reject()));
+
+	this->setWindowTitle("Se connecter à une caméra réseau");
 }
 
 QString NetworkStreamInputDialog::getResult(){
