@@ -119,7 +119,7 @@ HEADERS += \
     Algorithm_CustomCondensationTemplateV1.h \
     Algorithme_CondensationB.h \
     Algorithm_TaggingB.h \
-    Algorithm_Sub_TaggingB.h
+    Algorithm_Sub_TaggingB.h \
     Algorithm_CustomCondensationTemplateV2.h \
     Matcher_GreyLevelDistanceMatcher.h \
     Target_CondensationTargetV2.h \
