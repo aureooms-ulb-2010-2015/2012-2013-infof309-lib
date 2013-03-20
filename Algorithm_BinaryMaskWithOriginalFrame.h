@@ -15,6 +15,7 @@ private:
 public:
 
 	BinaryMaskWithOriginalFrame();
+	BinaryMaskWithOriginalFrame(cv::Size blurRange):_mask(blurRange){}
 	void process(const cv::Mat &in, cv::Mat &out);
 };
 
