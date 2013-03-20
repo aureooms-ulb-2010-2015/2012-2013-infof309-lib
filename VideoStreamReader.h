@@ -19,6 +19,7 @@ private:
 	cv::VideoCapture _source;
 	QMutex _lock;
 	int _position;
+	int _size;
 
 public:
 
@@ -43,12 +44,17 @@ public:
 	virtual int next(cv::Mat& out){
 		int n;
 		this->_lock.lock();
-		bool data = this->_source.read(out);
-		if(!data){
-			n = -1;
+		if(this->_position != this->_size){
+			bool data = this->_source.read(out);
+			if(!data){
+				n = -1;
+			}
+			else{
+				n = this->_position++;
+			}
 		}
 		else{
-			n = this->_position++;
+			n = -1;
 		}
 		this->_lock.unlock();
 		return n;
@@ -98,6 +104,7 @@ public:
             this->_source.release();
         }
         this->_source.open(fileName.toStdString());
+		this->_size = this->_source.get(CV_CAP_PROP_FRAME_COUNT);
 
 		this->_position = 0;
 		this->_lock.unlock();
@@ -110,7 +117,7 @@ public:
 			this->_source.release();
 		}
 		this->_source.open(device);
-
+		this->_size = this->_source.get(CV_CAP_PROP_FRAME_COUNT);
 		this->_position = 0;
 		this->_lock.unlock();
 
