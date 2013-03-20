@@ -221,11 +221,15 @@ private:
 			}
 
 			for(size_t i = 0; i < distances.x.size(); ++i){
-				density.x[i] = (distances.x[i] >= MAX_DIST)? 0 : MAX_DIST - distances.x[i];
+				if(refCounter.x[i] > 0){
+					density.x[i] = (distances.x[i] >= MAX_DIST)? 0 : MAX_DIST - distances.x[i];
+				}
 			}
 
 			for(size_t i = 0; i < distances.y.size(); ++i){
-				density.y[i] = (distances.y[i] >= MAX_DIST)? 0 : MAX_DIST - distances.y[i];
+				if(refCounter.y[i] > 0){
+					density.y[i] = (distances.y[i] >= MAX_DIST)? 0 : MAX_DIST - distances.y[i];
+				}
 			}
 
 
@@ -264,7 +268,7 @@ private:
 				feature.point = corner;
 				feature.density = density;
 				target.features.push_back(feature);
-				cv::circle(out, feature.point, 3, cv::Scalar(0,0,255),-1);
+				cv::circle(out, feature.point, 3, color,-1);
 			}
 
 
@@ -327,17 +331,19 @@ private:
 
 	void spread(Density& density, Delta delta, int spreadRange){
 		Density temp = density;
-		int blurRange = abs(delta) + spreadRange;
+		size_t blurRange = abs(delta) + spreadRange;
 		int size = density.size();
-		for(int i = 0; i < size; ++i){
-			int val = 0;
-			int k = 0;
-			int begin = std::max(0,i-blurRange/2);
-			int end = std::min(size,i+blurRange/2);
-			for(int j = begin; j < end; ++j, ++k){
-				val += temp[j];
+		for(size_t d = 0; d < blurRange; ++d){
+			for(int i = 0; i < size; ++i){
+				int val = 0;
+				int k = 0;
+				int begin = std::max(0,i-1);
+				int end = std::min(size,i+1);
+				for(int j = begin; j < end; ++j, ++k){
+					val += temp[j];
+				}
+				if(k > 0) density[i] = val/k;
 			}
-			if(k > 0) density[i] = val/k;
 		}
 	}
 
