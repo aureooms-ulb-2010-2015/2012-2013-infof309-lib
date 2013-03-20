@@ -116,7 +116,10 @@ HEADERS += \
     Algorithm_Condensation.h \
     Algorithm_ColorDetection.h \
     Algorithm_BinaryMaskWithOriginalFrame.h \
-    Algorithm_CustomCondensationTemplateV1.h
+    Algorithm_CustomCondensationTemplateV1.h \
+    Algorithme_CondensationB.h \
+    Algorithm_TaggingB.h \
+    Algorithm_Sub_TaggingB.h
 
 
 
