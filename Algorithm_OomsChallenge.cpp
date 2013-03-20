@@ -5,15 +5,16 @@
 OomsChallenge::OomsChallenge():_threshold(10), _learningRate(0.01){}
 
 void OomsChallenge::process(const cv::Mat &in, cv::Mat &out) {
-	const int AGE_TRUST = 64;
-	const int AGE_MID = 24;
-	const int AGE_DIE = 12;
+	const int AGE_TRUST = 168;
+	const int AGE_MID = 32;
+	const int AGE_DIE = 20;
+	const int AGE_LOST_SHOW = 120;
 	const int AGE_PENALTY = 1;
-	const int AGE_BONUS = 2;
+	const int AGE_BONUS = 1;
 	const int MAXSIZE = 40;
 	const int MINSIZE = 5;
 	int nbFishs = 0;
-	cv::Size gaussian(10,10);
+	cv::Size gaussian(1,1);
 
 	out = in.clone();
 	//return;
@@ -55,10 +56,12 @@ void OomsChallenge::process(const cv::Mat &in, cv::Mat &out) {
 	cv::accumulateWeighted(this->_gray, this->_background, this->_learningRate, temp);
 
 	std::vector<Target> newTargets;
-	//Get & Draw the bounding rectangle around the moving object
+	// adds new targets
 	for(unsigned int i = 0; i < contour.size(); ++i){
 		cv::Rect rect =  cv::boundingRect(contour.at(i));
-		newTargets.push_back(Target(rect));
+		Target target(rect);
+		target.tid = ++NEXT_ID;
+		newTargets.push_back(target);
 	}
 
 	for(size_t i = 0; i < newTargets.size();){
@@ -80,8 +83,17 @@ void OomsChallenge::process(const cv::Mat &in, cv::Mat &out) {
 	for(size_t k = 0; k < matches.size(); ++k){
 		size_t i = matches.at(k).first;
 		size_t j = matches.at(k).second;
+		newTargets.at(j).tid = this->_previousTargets.at(i).tid;
 		newTargets.at(j).age = this->_previousTargets.at(i).age + AGE_BONUS;
 		if(newTargets.at(j).age > AGE_TRUST){
+			std::ostringstream text;
+			text << newTargets.at(j).tid;
+
+			cv::Point point;
+			point.x = newTargets.at(j).rect.br().x + 5;
+			point.y = newTargets.at(j).rect.br().y + 5;
+
+			cv::putText(out, text.str(), point, cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,122,0), 1, CV_AA);
 			cv::rectangle(out, newTargets.at(j).rect, cv::Scalar(0, 122, 0), 1, 8, 0 );
 			++nbFishs;
 		}
@@ -113,12 +125,12 @@ void OomsChallenge::process(const cv::Mat &in, cv::Mat &out) {
 	//DECREMENT AGE ON OLD TARGETS
 	for(size_t i = 0; i < this->_previousTargets.size(); ++i){
 		this->_previousTargets.at(i).age -= AGE_PENALTY;
-		if(this->_previousTargets.at(i).age > AGE_DIE){
-			cv::rectangle(out, this->_previousTargets.at(i).rect, cv::Scalar(122, 0, 0), 1, 8, 0 );
-		}
-		else{
+		if(this->_previousTargets.at(i).age <= AGE_DIE){
 			this->_previousTargets.erase(this->_previousTargets.begin()+i);
 			--i;
+		}
+		else if(this->_previousTargets.at(i).age > AGE_LOST_SHOW){
+			cv::rectangle(out, this->_previousTargets.at(i).rect, cv::Scalar(122, 0, 0), 1, 8, 0 );
 		}
 	}
 
@@ -195,7 +207,8 @@ void OomsChallenge::writeFishCount(cv::Mat& out, int nbFishs){
 	point.y=20;
 
 
-	std::string fishs_ = static_cast<std::ostringstream*>( &(std::ostringstream() << nbFishs) )->str();
+	std::ostringstream text;
+	text << nbFishs;
 
-	cv::putText(out, "Number of Fishs : "+fishs_, point, cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(255,0,0), 1, CV_AA);
+	cv::putText(out, "Nombre de poissons : " + text.str(), point, cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(255,0,0), 1, CV_AA);
 }

@@ -26,6 +26,8 @@ private:
 	int _threshold;			// threshold for foreground extraction
 	double _learningRate;    // learning rate in background accumulation
 
+	size_t NEXT_ID = ~0;
+
 
 public:
 

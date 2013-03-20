@@ -120,6 +120,10 @@ HEADERS += \
     Algorithme_CondensationB.h \
     Algorithm_TaggingB.h \
     Algorithm_Sub_TaggingB.h
+    Algorithm_CustomCondensationTemplateV2.h \
+    Matcher_GreyLevelDistanceMatcher.h \
+    Target_CondensationTargetV2.h \
+    Algorithm_AccumulateBackground.h
 
 
 
@@ -153,5 +157,4 @@ OTHER_FILES += \
     xml/haarcascade_frontalface_alt.xml \
     xml/haarcascade_eye_tree_eyeglasses.xml \
     xml/facedata.xml \
-    README.md \
-    lib309.pro.user
+    README.md

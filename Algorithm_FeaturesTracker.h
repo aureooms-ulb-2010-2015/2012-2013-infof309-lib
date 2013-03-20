@@ -61,6 +61,10 @@ class FeatureTracker : public FrameProcessor {
             initial.insert(initial.end(),features.begin(),features.end());
         }
 
+		for(size_t i = 0; i < points[0].size(); ++i){
+			cv::circle(output, points[0][i], 3, cv::Scalar(0,0,255),-1);
+		}
+
         // for first image of the sequence
         if(gray_prev.empty())
            gray.copyTo(gray_prev);
@@ -131,8 +135,8 @@ class FeatureTracker : public FrameProcessor {
 		for(size_t i= 0; i < points[1].size(); i++ ) {
 
             // draw line and circle
-            cv::line(output, initial[i], points[1][i], cv::Scalar(255,255,255));
-            cv::circle(output, points[1][i], 3, cv::Scalar(255,255,255),-1);
+			cv::line(output, initial[i], points[1][i], cv::Scalar(0,122,0));
+			cv::circle(output, points[1][i], 3, cv::Scalar(0,122,0),-1);
         }
     }
 };
