@@ -17,6 +17,7 @@ InputChoiceWidget::InputChoiceWidget():_lastVisitedFolder(QDir::homePath()){
 	this->setStyleSheet(styleSheet2);
 	file2.close();
 
+	this->refreshDevices();
 
 	QObject::connect(this,SIGNAL(currentIndexChanged(int)),this,SLOT(currentIndexChangedSLOT(int)));
 }
