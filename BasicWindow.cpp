@@ -1,8 +1,5 @@
 #include "BasicWindow.h"
 
-
-#include "BasicWindow.h"
-
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QDesktopWidget>

@@ -3,7 +3,6 @@
 
 #include <QMainWindow>
 #include "VideoStreamReader.h"
-#include "TimeControlWidget.h"
 #include "VideoPlayControlsWidget.h"
 #include "StreamDisplayer.h"
 #include "InputChoiceWidget.h"
@@ -35,7 +34,6 @@ protected:
 	InputChoiceWidget* _inputChoice = new InputChoiceWidget();
 
 	void sourceReady();
-	virtual FrameProcessor* generateProcessor() = 0;
 	void centerWindow();
 	void reloadStream();
 	void playPauseToggle();
@@ -44,9 +42,11 @@ protected:
 	QString lastPath;
 	int whichLast = -1;
 
+	virtual FrameProcessor* generateProcessor() = 0;
+
 public:
 	explicit BasicWindow(QWidget *parent = 0);
-	~BasicWindow();
+	virtual ~BasicWindow();
 	virtual void keyPressEvent(QKeyEvent *);
 
 public slots:
