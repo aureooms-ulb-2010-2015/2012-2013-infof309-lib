@@ -68,7 +68,7 @@ private:
 	Targets currentlyTracked;
 	size_t pollingRange = 300;
 	size_t generatingRange = 1;
-	int spreadRange = 20;
+	int spreadRange = 50;
 	int minScore = 50;
 	int TARGET_MIN_WIDTH = 1; //should be at least 1 px and correspond to rect generator (eg tagging) results for no crash
 	int TARGET_MIN_HEIGHT = 1;
@@ -81,7 +81,7 @@ private:
 	std::vector<std::vector<cv::Point> > contour;
 	std::vector<cv::Vec4i> hierarchy;
 
-	int maxCorners = 10;
+	int maxCorners = 200;
 	double qualityLevel = 0.01;
 	double minDistance = 10;
 	cv::InputArray maskArray = cv::noArray();
@@ -90,6 +90,10 @@ private:
 	double k = 0.04;
 
 	cv::Mat grey;
+
+	size_t MIN_ACCUMULATOR_ITERATIONS = 90;
+
+	size_t accumulatorIterations = 0;
 
 
 public:
@@ -101,6 +105,8 @@ public:
 		cv::cvtColor(in, grey, CV_BGR2GRAY);
 
 		accumulator.process(in);
+		++accumulatorIterations;
+		if(accumulatorIterations < MIN_ACCUMULATOR_ITERATIONS) return;
 
 		for(Target& target : currentlyTracked){
 			this->ConDensAte(in, out, target);
@@ -158,7 +164,8 @@ private:
 	Points generatePoints(DiscreteDistributions &distributions){
 
 		Points result;
-		for(size_t i = 0; i < pollingRange; ++i){
+		size_t rangeSize = (distributions.x.max() - distributions.x.min()) * (distributions.y.max() - distributions.y.min());
+		for(size_t i = 0; i < pollingRange && i < rangeSize ; ++i){
 			result.push_back(Point(distributions.x(generator),distributions.y(generator)));
 		}
 		return result;
@@ -169,6 +176,9 @@ private:
 		density.y.clear();
 		density.x.resize(in.cols, 0);
 		density.y.resize(in.rows, 0);
+	}
+
+	void initDistances(const cv::Mat& in){
 		distances.x.clear();
 		distances.y.clear();
 		distances.x.resize(in.cols, 0);
@@ -185,6 +195,7 @@ private:
 	void ConDensAte(const cv::Mat &in, cv::Mat &out, Target& target){
 		for(Feature& feature : target.features){
 			this->initDensity(in);
+			this->initDistances(in);
 			DiscreteDistributions distributions = {
 				DiscreteDistribution(feature.density.x.begin(), feature.density.x.end()),
 				DiscreteDistribution(feature.density.y.begin(), feature.density.y.end())
@@ -261,8 +272,8 @@ private:
 			target.features.reserve(corners.size());
 			for(Point corner : corners){
 				this->initDensity(in);
-				density.x[corner.x] = 100;
-				density.y[corner.y] = 100;
+				density.x[corner.x] = MAX_DIST;
+				density.y[corner.y] = MAX_DIST;
 				spread(deltas);
 				Feature feature;
 				feature.point = corner;
@@ -344,6 +355,7 @@ private:
 				}
 				if(k > 0) density[i] = val/k;
 			}
+			temp = density;
 		}
 	}
 
