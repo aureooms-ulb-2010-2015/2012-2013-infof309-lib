@@ -338,7 +338,7 @@ private:
 				int val = 0;
 				int k = 0;
 				int begin = std::max(0,i-1);
-				int end = std::min(size,i+1);
+				int end = std::min(size,i+2);
 				for(int j = begin; j < end; ++j, ++k){
 					val += temp[j];
 				}
