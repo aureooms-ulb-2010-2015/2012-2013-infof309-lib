@@ -3,6 +3,8 @@
 #include "VideoCaptureDeviceDetectorForLinux.h"
 #include <QListView>
 #include <QStyledItemDelegate>
+#include <QApplication>
+#include <iostream>
 
 // add per url http://192.168.2.29/video.cgi?resolution=640x480&req_fps=10&.mjpg
 
@@ -46,7 +48,14 @@ void InputChoiceWidget::refreshDevices(){
 	QList<VideoCaptureDeviceInfo> infoList = dtc.getCaptureDevicesInfo();
 	for(int i = 0; i < infoList.size(); ++i){
 		this->addItem(infoList.at(i).name);
-    }
+	}
+}
+
+void InputChoiceWidget::keyPressEvent(QKeyEvent *event){
+	if(QApplication::keyboardModifiers() & Qt::ControlModifier){
+		return event->ignore();
+	}
+	return QComboBox::keyPressEvent(event);
 }
 
 void InputChoiceWidget::chooseNetworkStream(){
