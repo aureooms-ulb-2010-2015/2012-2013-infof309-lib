@@ -66,12 +66,14 @@ private:
 
 	Generator generator = Generator(Clock::now().time_since_epoch().count());
 	Targets currentlyTracked;
-	size_t pollingRange = 300;
+	size_t pollingRange = 50;
 	size_t generatingRange = 1;
-	int spreadRange = 50;
-	int minScore = 50;
-	int TARGET_MIN_WIDTH = 1; //should be at least 1 px and correspond to rect generator (eg tagging) results for no crash
-	int TARGET_MIN_HEIGHT = 1;
+	int spreadRange = 20;
+	//int minScore = 50;
+	int TARGET_MIN_WIDTH = 50; //should be at least 1 px and correspond to rect generator (eg tagging) results for no crash
+	int TARGET_MIN_HEIGHT = 50;
+	int TARGET_MAX_WIDTH = 300;
+	int TARGET_MAX_HEIGHT = 300;
 	size_t MAX_DIST = 1000000;
 	Densities density;
 	Distances2D distances;
@@ -136,7 +138,12 @@ private:
 		Rects rects;
 
 		for(unsigned int i = 0; i< contour.size(); i++ ){
-			rects.push_back(cv::boundingRect(contour.at(i)));
+			Rect rect = cv::boundingRect(contour.at(i));
+			if(rect.width > TARGET_MAX_WIDTH
+					|| rect.width < TARGET_MIN_WIDTH
+					|| rect.height > TARGET_MAX_HEIGHT
+					|| rect.height < TARGET_MIN_HEIGHT) continue;
+			rects.push_back(rect);
 		}
 
 		return rects;
@@ -216,7 +223,7 @@ private:
 
 				scores.insert(std::pair<Score, cv::Point>(distance, point));
 
-				cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
+				//cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
 			}
 
 			for(size_t i = 0; i < refCounter.x.size(); ++i){
@@ -271,6 +278,8 @@ private:
 			Target target;
 			target.features.reserve(corners.size());
 			for(Point corner : corners){
+				corner.x += rect.x;
+				corner.y += rect.y;
 				this->initDensity(in);
 				density.x[corner.x] = MAX_DIST;
 				density.y[corner.y] = MAX_DIST;
