@@ -83,7 +83,7 @@ private:
 	std::vector<std::vector<cv::Point> > contour;
 	std::vector<cv::Vec4i> hierarchy;
 
-	int maxCorners = 200;
+	int maxCorners = 10;
 	double qualityLevel = 0.01;
 	double minDistance = 10;
 	cv::InputArray maskArray = cv::noArray();
@@ -92,6 +92,7 @@ private:
 	double k = 0.04;
 
 	cv::Mat grey;
+	cv::Mat grey_prev;
 
 	size_t MIN_ACCUMULATOR_ITERATIONS = 90;
 
@@ -104,14 +105,16 @@ public:
 
 	void process(const cv::Mat &in, cv::Mat &out){
 		out = in.clone();
-		cv::cvtColor(in, grey, CV_BGR2GRAY);
 
 		accumulator.process(in);
 		++accumulatorIterations;
 		if(accumulatorIterations < MIN_ACCUMULATOR_ITERATIONS) return;
+		cv::cvtColor(in, grey, CV_BGR2GRAY);
 
-		for(Target& target : currentlyTracked){
-			this->ConDensAte(in, out, target);
+		if(!grey_prev.empty()){
+			for(Target& target : currentlyTracked){
+				this->ConDensAte(in, out, target);
+			}
 		}
 
 		if(currentlyTracked.size() < generatingRange){
@@ -121,7 +124,8 @@ public:
 		for(const Target& target : currentlyTracked){
 			drawTarget(out, target);
 		}
-
+		//swap buffers
+		cv::swap(grey_prev, grey);
 		return;
 	}
 
@@ -215,7 +219,7 @@ private:
 
 			for(const Point& point : points){
 
-				Distance distance = this->matcher.computeDistance(grey, feature.point, point);
+				Distance distance = this->matcher.computeDistance(grey_prev, grey, feature.point, point);
 				++refCounter.x[point.x];
 				++refCounter.y[point.y];
 				distances.x[point.x] += distance;
@@ -223,7 +227,11 @@ private:
 
 				scores.insert(std::pair<Score, cv::Point>(distance, point));
 
+<<<<<<< HEAD
                 //cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
+=======
+				cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
+>>>>>>> 96c7a51ac7e460a166aeaf4876a59e10a3ada594
 			}
 
 			for(size_t i = 0; i < refCounter.x.size(); ++i){
@@ -250,12 +258,14 @@ private:
 				}
 			}
 
+			this->initDensity(in);
+			feature.point = scores.begin()->second;
+			density.x[feature.point.x] = density.y[feature.point.y] = MAX_DIST;
 
 			Deltas deltas = this->shift(feature.density);
 			this->spread(deltas);
 
 			feature.density = density;
-			feature.point = scores.begin()->second;
 		}
 	}
 
