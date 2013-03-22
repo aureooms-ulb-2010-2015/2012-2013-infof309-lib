@@ -68,7 +68,7 @@ private:
 	Targets currentlyTracked;
 	size_t pollingRange = 50;
 	size_t generatingRange = 1;
-	int spreadRange = 20;
+    int spreadRange = 5;
 	//int minScore = 50;
 	int TARGET_MIN_WIDTH = 50; //should be at least 1 px and correspond to rect generator (eg tagging) results for no crash
 	int TARGET_MIN_HEIGHT = 50;
@@ -223,7 +223,7 @@ private:
 
 				scores.insert(std::pair<Score, cv::Point>(distance, point));
 
-				//cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
+                //cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
 			}
 
 			for(size_t i = 0; i < refCounter.x.size(); ++i){
