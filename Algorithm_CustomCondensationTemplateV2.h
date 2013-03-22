@@ -62,7 +62,14 @@ public:
 		std::vector<size_t> y;
 	} RefCounter;
 
+	typedef struct{
+		int mean[2] = {0,0};
+		int deviation[2] = {0,0};
+	} Gaussian;
+
 private:
+
+	cv::Scalar COLOR_NEW_FEATURE =  cv::Scalar(0x98, 0x59, 0x3b);
 
 	Generator generator = Generator(Clock::now().time_since_epoch().count());
 	Targets currentlyTracked;
@@ -74,7 +81,7 @@ private:
 	int TARGET_MIN_HEIGHT = 50;
 	int TARGET_MAX_WIDTH = 300;
 	int TARGET_MAX_HEIGHT = 300;
-	size_t MAX_DIST = 1000000;
+	size_t MAX_DIST = 200;
 	Densities density;
 	Distances2D distances;
 	RefCounter refCounter;
@@ -115,6 +122,20 @@ public:
 			for(Target& target : currentlyTracked){
 				this->ConDensAte(in, out, target);
 			}
+			this->removeLostTargets();
+			for(Target& target : currentlyTracked){
+				if(target.features.size() < maxCorners){
+					this->findNewFeatures(in, out, target);
+				}
+				this->filterFeatures(target);
+			}
+			this->removeLostTargets();
+
+			for(Target& target : currentlyTracked){
+				if(target.features.size() < maxCorners){
+					this->findNewFeatures(in, out, target);
+				}
+			}
 		}
 
 		if(currentlyTracked.size() < generatingRange){
@@ -130,6 +151,87 @@ public:
 	}
 
 private:
+
+
+	void removeLostTargets(){
+		for(size_t i = 0; i < currentlyTracked.size();){
+			if(currentlyTracked.at(i).features.empty()){
+				currentlyTracked.erase(currentlyTracked.begin()+i);
+			}
+			else{
+				++i;
+			}
+		}
+	}
+
+	Gaussian computePositionGaussian(Target& target){
+		Gaussian gaussian;
+		size_t k = 0;
+		for(Feature& feature : target.features){
+			gaussian.mean[0] += feature.point.x;
+			gaussian.mean[1] += feature.point.y;
+			++k;
+		}
+		gaussian.mean[0] /= k;
+		gaussian.mean[1] /= k;
+		int delta[2];
+		for(Feature& feature : target.features){
+			delta[0] = feature.point.x - gaussian.mean[0];
+			delta[1] = feature.point.y - gaussian.mean[1];
+			gaussian.deviation[0] += delta[0]*delta[0];
+			gaussian.deviation[1] += delta[1]*delta[1];
+		}
+		gaussian.deviation[0] /= k;
+		gaussian.deviation[1] /= k;
+
+		gaussian.deviation[0] = sqrt(gaussian.deviation[0]);
+		gaussian.deviation[1] = sqrt(gaussian.deviation[1]);
+
+		return gaussian;
+	}
+
+	void findNewFeatures(const cv::Mat& in, cv::Mat& out, Target& target){
+
+		Gaussian gaussian = computePositionGaussian(target);
+
+		Rect roi;
+		roi.x = std::max(gaussian.mean[0] - gaussian.deviation[0]*2, 0);
+		roi.y = std::max(gaussian.mean[1] - gaussian.deviation[1]*2, 0);
+		roi.width = gaussian.deviation[0]*4 + 1;
+		roi.height = gaussian.deviation[1]*4 + 1;
+
+		if(roi.x + roi.width > in.cols){
+			roi.width = in.cols - roi.x;
+		}
+
+		if(roi.y + roi.height > in.rows){
+			roi.height = in.rows - roi.y;
+		}
+
+		std::vector<cv::Point2f> corners;
+		cv::goodFeaturesToTrack(grey(roi), corners,
+								maxCorners - target.features.size(), qualityLevel,
+								minDistance, maskArray,
+								blockSize, useHarrisDetector, k);
+		Deltas deltas;
+		deltas.x = 0;
+		deltas.y = 0;
+		if(!corners.empty()){
+			for(Point corner : corners){
+				corner.x += roi.x;
+				corner.y += roi.y;
+				this->initDensity(in);
+				density.x[corner.x] = MAX_DIST;
+				density.y[corner.y] = MAX_DIST;
+				spread(deltas);
+				Feature feature;
+				feature.point /*= feature.initial*/ = corner;
+				feature.density = density;
+				target.features.push_back(feature);
+				cv::circle(out, feature.point, 3, COLOR_NEW_FEATURE,-1);
+			}
+		}
+	}
 
 	Rects getMovingObjects() {
 
@@ -204,64 +306,123 @@ private:
 	}
 
 	void ConDensAte(const cv::Mat &in, cv::Mat &out, Target& target){
-		for(Feature& feature : target.features){
-			this->initDensity(in);
-			this->initDistances(in);
+
+		for(size_t i = 0; i < target.features.size();){
+			Feature& feature = target.features.at(i);
+//			this->initDensity(in);
+//			this->initDistances(in);
 			DiscreteDistributions distributions = {
 				DiscreteDistribution(feature.density.x.begin(), feature.density.x.end()),
 				DiscreteDistribution(feature.density.y.begin(), feature.density.y.end())
 			};
 
 			Points points = generatePoints(distributions);
+			if(!points.empty()){
+	//			std::map<Score, cv::Point> scores;
+				Points::iterator point = points.begin();
+				cv::Point bestCandidate = *point;
+				Distance minDist = this->matcher.computeDistance(grey_prev, grey, feature.point, bestCandidate);
+	//			this->initRefCounter(in);
 
-			std::map<Score, cv::Point> scores;
-			this->initRefCounter(in);
+				for(++point; point != points.end(); ++point){
 
-			for(const Point& point : points){
+					Distance distance = this->matcher.computeDistance(grey_prev, grey, feature.point, *point);
+	//				++refCounter.x[point.x];
+	//				++refCounter.y[point.y];
+	//				distances.x[point.x] += distance;
+	//				distances.y[point.y] += distance;
 
-				Distance distance = this->matcher.computeDistance(grey_prev, grey, feature.point, point);
-				++refCounter.x[point.x];
-				++refCounter.y[point.y];
-				distances.x[point.x] += distance;
-				distances.y[point.y] += distance;
+	//				scores.insert(std::pair<Score, cv::Point>(distance, point));
+					if(distance < minDist){
+						bestCandidate = *point;
+						minDist = distance;
+						if(minDist == 0){
+							cv::circle(out, *point, 3, cv::Scalar(0x3b, 0x59, 0x98),-1);
+							break;
+						}
+					}
 
-				scores.insert(std::pair<Score, cv::Point>(distance, point));
-
-				cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
-			}
-
-			for(size_t i = 0; i < refCounter.x.size(); ++i){
-				if(refCounter.x[i] > 1){
-					distances.x[i] /= refCounter.x[i];
+					cv::circle(out, *point, 3, cv::Scalar(0,0,255),-1);
 				}
-			}
 
-			for(size_t i = 0; i < refCounter.y.size(); ++i){
-				if(refCounter.y[i] > 1){
-					distances.y[i] /= refCounter.y[i];
+	//			for(size_t i = 0; i < refCounter.x.size(); ++i){
+	//				if(refCounter.x[i] > 1){
+	//					distances.x[i] /= refCounter.x[i];
+	//				}
+	//			}
+
+	//			for(size_t i = 0; i < refCounter.y.size(); ++i){
+	//				if(refCounter.y[i] > 1){
+	//					distances.y[i] /= refCounter.y[i];
+	//				}
+	//			}
+
+	//			for(size_t i = 0; i < distances.x.size(); ++i){
+	//				if(refCounter.x[i] > 0){
+	//					density.x[i] = (distances.x[i] >= MAX_DIST)? 0 : MAX_DIST - distances.x[i];
+	//				}
+	//			}
+
+	//			for(size_t i = 0; i < distances.y.size(); ++i){
+	//				if(refCounter.y[i] > 0){
+	//					density.y[i] = (distances.y[i] >= MAX_DIST)? 0 : MAX_DIST - distances.y[i];
+	//				}
+	//			}
+
+				if (minDist > MAX_DIST){
+					target.features.erase(target.features.begin()+i);
+					continue;
 				}
+
+				this->initDensity(in);
+				feature.point = bestCandidate;
+				density.x[feature.point.x] = density.y[feature.point.y] = MAX_DIST;
+
+				Deltas deltas = this->shift(feature.density);
+				this->spread(deltas);
+
+				feature.density = density;
+				++i;
 			}
-
-			for(size_t i = 0; i < distances.x.size(); ++i){
-				if(refCounter.x[i] > 0){
-					density.x[i] = (distances.x[i] >= MAX_DIST)? 0 : MAX_DIST - distances.x[i];
-				}
+			else{
+				target.features.erase(target.features.begin()+i);
 			}
+		}
+	}
 
-			for(size_t i = 0; i < distances.y.size(); ++i){
-				if(refCounter.y[i] > 0){
-					density.y[i] = (distances.y[i] >= MAX_DIST)? 0 : MAX_DIST - distances.y[i];
-				}
+	void filterFeatures(Target& target){
+		int mean[2] = {0,0};
+		size_t k = 0;
+		for(Feature& feature : target.features){
+			mean[0] += feature.point.x;
+			mean[1] += feature.point.y;
+			++k;
+		}
+		mean[0] /= k;
+		mean[1] /= k;
+		int deviation[2] = {0,0};
+		int delta[2];
+		for(Feature& feature : target.features){
+			delta[0] = feature.point.x - mean[0];
+			delta[1] = feature.point.y - mean[1];
+			deviation[0] += delta[0]*delta[0];
+			deviation[1] += delta[1]*delta[1];
+		}
+		deviation[0] /= k;
+		deviation[1] /= k;
+
+		deviation[0] = sqrt(deviation[0]);
+		deviation[1] = sqrt(deviation[1]);
+
+		for(size_t i = 0; i < target.features.size();){
+			delta[0] = target.features.at(i).point.x - mean[0];
+			delta[1] = target.features.at(i).point.y - mean[1];
+			if(delta[0] > deviation[0]*2 || delta[1] > deviation[1]*2){
+				target.features.erase(target.features.begin()+i);
 			}
-
-			this->initDensity(in);
-			feature.point = scores.begin()->second;
-			density.x[feature.point.x] = density.y[feature.point.y] = MAX_DIST;
-
-			Deltas deltas = this->shift(feature.density);
-			this->spread(deltas);
-
-			feature.density = density;
+			else{
+				++i;
+			}
 		}
 	}
 
@@ -281,26 +442,28 @@ private:
 									maxCorners, qualityLevel,
 									minDistance, maskArray,
 									blockSize, useHarrisDetector, k);
-			Target target;
-			target.features.reserve(corners.size());
-			for(Point corner : corners){
-				corner.x += rect.x;
-				corner.y += rect.y;
-				this->initDensity(in);
-				density.x[corner.x] = MAX_DIST;
-				density.y[corner.y] = MAX_DIST;
-				spread(deltas);
-				Feature feature;
-				feature.point = corner;
-				feature.density = density;
-				target.features.push_back(feature);
-				cv::circle(out, feature.point, 3, color,-1);
+			if(!corners.empty()){
+				Target target;
+				target.features.reserve(corners.size());
+				for(Point corner : corners){
+					corner.x += rect.x;
+					corner.y += rect.y;
+					this->initDensity(in);
+					density.x[corner.x] = MAX_DIST;
+					density.y[corner.y] = MAX_DIST;
+					spread(deltas);
+					Feature feature;
+					feature.point /*= feature.initial*/ = corner;
+					feature.density = density;
+					target.features.push_back(feature);
+					cv::circle(out, feature.point, 3, color,-1);
+				}
+
+
+				currentlyTracked.push_back(target);
+				std::cout << "pushed new target" << std::endl;
+				cv::rectangle(out, rect, color);
 			}
-
-
-			currentlyTracked.push_back(target);
-			std::cout << "pushed new target" << std::endl;
-			cv::rectangle(out, rect, color);
 		}
 	}
 
@@ -350,16 +513,18 @@ private:
 				temp.assign(density.begin()-delta, density.end());
 				temp.resize(density.size(), 0);
 			}
+			density = temp;
 		}
 
 		return delta;
 	}
 
 	void spread(Density& density, Delta delta, int spreadRange){
-		Density temp = density;
+		Density temp;
 		size_t blurRange = abs(delta) + spreadRange;
 		int size = density.size();
 		for(size_t d = 0; d < blurRange; ++d){
+			temp = density;
 			for(int i = 0; i < size; ++i){
 				int val = 0;
 				int k = 0;
@@ -370,7 +535,6 @@ private:
 				}
 				if(k > 0) density[i] = val/k;
 			}
-			temp = density;
 		}
 	}
 
