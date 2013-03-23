@@ -67,9 +67,14 @@ public:
 		int deviation[2] = {0,0};
 	} Gaussian;
 
+	typedef std::vector<cv::Point> Contour;
+	typedef std::vector<Contour> Contours;
+
 private:
 
 	cv::Scalar COLOR_NEW_FEATURE =  cv::Scalar(0x98, 0x59, 0x3b);
+	cv::Scalar COLOR_WHITE = cv::Scalar::all(255);
+	cv::Scalar COLOR_BLACK = cv::Scalar(0,0,0);
 
 	Generator generator = Generator(Clock::now().time_since_epoch().count());
 	Targets currentlyTracked;
@@ -87,10 +92,10 @@ private:
 	RefCounter refCounter;
 
 	AccumulateBackground accumulator;
-	std::vector<std::vector<cv::Point> > contour;
+	Contours contours;
 	std::vector<cv::Vec4i> hierarchy;
 
-	int maxCorners = 10;
+	int maxCorners = 30;
 	double qualityLevel = 0.01;
 	double minDistance = 10;
 	cv::InputArray maskArray = cv::noArray();
@@ -101,7 +106,7 @@ private:
 	cv::Mat grey;
 	cv::Mat grey_prev;
 
-	size_t MIN_ACCUMULATOR_ITERATIONS = 90;
+	size_t MIN_ACCUMULATOR_ITERATIONS = 45;
 
 	size_t accumulatorIterations = 0;
 
@@ -190,6 +195,32 @@ private:
 		return gaussian;
 	}
 
+	Gaussian computeShiftGaussian(Target& target){
+		Gaussian gaussian;
+		size_t k = 0;
+		for(Feature& feature : target.features){
+			gaussian.mean[0] += feature.point.x - feature.initial.x;
+			gaussian.mean[1] += feature.point.y - feature.initial.y;
+			++k;
+		}
+		gaussian.mean[0] /= k;
+		gaussian.mean[1] /= k;
+		int delta[2];
+		for(Feature& feature : target.features){
+			delta[0] = feature.point.x - feature.initial.x - gaussian.mean[0];
+			delta[1] = feature.point.y - feature.initial.y - gaussian.mean[1];
+			gaussian.deviation[0] += delta[0]*delta[0];
+			gaussian.deviation[1] += delta[1]*delta[1];
+		}
+		gaussian.deviation[0] /= k;
+		gaussian.deviation[1] /= k;
+
+		gaussian.deviation[0] = sqrt(gaussian.deviation[0]);
+		gaussian.deviation[1] = sqrt(gaussian.deviation[1]);
+
+		return gaussian;
+	}
+
 	void findNewFeatures(const cv::Mat& in, cv::Mat& out, Target& target){
 
 		Gaussian gaussian = computePositionGaussian(target);
@@ -213,10 +244,10 @@ private:
 								maxCorners - target.features.size(), qualityLevel,
 								minDistance, maskArray,
 								blockSize, useHarrisDetector, k);
-		Deltas deltas;
-		deltas.x = 0;
-		deltas.y = 0;
 		if(!corners.empty()){
+			Deltas deltas;
+			deltas.x = 0;
+			deltas.y = 0;
 			for(Point corner : corners){
 				corner.x += roi.x;
 				corner.y += roi.y;
@@ -225,7 +256,7 @@ private:
 				density.y[corner.y] = MAX_DIST;
 				spread(deltas);
 				Feature feature;
-				feature.point /*= feature.initial*/ = corner;
+				feature.point = feature.initial = corner;
 				feature.density = density;
 				target.features.push_back(feature);
 				cv::circle(out, feature.point, 3, COLOR_NEW_FEATURE,-1);
@@ -236,20 +267,24 @@ private:
 	Rects getMovingObjects() {
 
 		cv::findContours(accumulator.getForeground(),
-						 contour,
+						 contours,
 						 hierarchy,
 						 CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
 
 
 		Rects rects;
 
-		for(unsigned int i = 0; i< contour.size(); i++ ){
-			Rect rect = cv::boundingRect(contour.at(i));
+		for(unsigned int i = 0; i < contours.size();){
+			Rect rect = cv::boundingRect(contours.at(i));
 			if(rect.width > TARGET_MAX_WIDTH
 					|| rect.width < TARGET_MIN_WIDTH
 					|| rect.height > TARGET_MAX_HEIGHT
-					|| rect.height < TARGET_MIN_HEIGHT) continue;
+					|| rect.height < TARGET_MIN_HEIGHT){
+				contours.erase(contours.begin()+i);
+				continue;
+			}
 			rects.push_back(rect);
+			++i;
 		}
 
 		return rects;
@@ -278,7 +313,15 @@ private:
 
 		Points result;
 		size_t rangeSize = (distributions.x.max() - distributions.x.min()) * (distributions.y.max() - distributions.y.min());
-		for(size_t i = 0; i < pollingRange && i < rangeSize ; ++i){
+		if (rangeSize <= pollingRange){
+			for(size_t x = distributions.x.min(); x < distributions.x.max(); ++x){
+				for(size_t y = distributions.y.min(); y < distributions.y.max(); ++y){
+					result.push_back(Point(x,y));
+				}
+			}
+			return result;
+		}
+		for(size_t i = 0; i < pollingRange; ++i){
 			result.push_back(Point(distributions.x(generator),distributions.y(generator)));
 		}
 		return result;
@@ -391,33 +434,14 @@ private:
 	}
 
 	void filterFeatures(Target& target){
-		int mean[2] = {0,0};
-		size_t k = 0;
-		for(Feature& feature : target.features){
-			mean[0] += feature.point.x;
-			mean[1] += feature.point.y;
-			++k;
-		}
-		mean[0] /= k;
-		mean[1] /= k;
-		int deviation[2] = {0,0};
-		int delta[2];
-		for(Feature& feature : target.features){
-			delta[0] = feature.point.x - mean[0];
-			delta[1] = feature.point.y - mean[1];
-			deviation[0] += delta[0]*delta[0];
-			deviation[1] += delta[1]*delta[1];
-		}
-		deviation[0] /= k;
-		deviation[1] /= k;
+		Gaussian gaussian = computeShiftGaussian(target);
 
-		deviation[0] = sqrt(deviation[0]);
-		deviation[1] = sqrt(deviation[1]);
+		int delta[2] = {0,0};
 
 		for(size_t i = 0; i < target.features.size();){
-			delta[0] = target.features.at(i).point.x - mean[0];
-			delta[1] = target.features.at(i).point.y - mean[1];
-			if(delta[0] > deviation[0]*2 || delta[1] > deviation[1]*2){
+			delta[0] = abs((target.features.at(i).point.x - target.features.at(i).initial.x) - gaussian.mean[0]);
+			delta[1] = abs((target.features.at(i).point.y - target.features.at(i).initial.y) - gaussian.mean[1]);
+			if(delta[0] > gaussian.deviation[0]*2 || delta[1] > gaussian.deviation[1]*2){
 				target.features.erase(target.features.begin()+i);
 			}
 			else{
@@ -429,18 +453,29 @@ private:
 	void pollNewTargets(const cv::Mat &in, cv::Mat &out){
 
 
-		Rects rects = getMovingObjects();
+		Rects rects = getMovingObjects(); //stored in contour
 
 		cv::Scalar color = cv::Scalar(0,0x80,0);
 
 		Deltas deltas;
 		deltas.x = 0;
 		deltas.y = 0;
-		for(const Rect& rect : rects){
+		for(size_t i = 0; i < rects.size(); ++i){
+			const Rect& rect = rects.at(i);
+			cv::drawContours(out, contours, i, COLOR_WHITE);
+			for(cv::Point& point : contours.at(i)){
+				point.x -= rect.x;
+				point.y -= rect.y;
+			}
 			std::vector<cv::Point2f> corners;
+
+			cv::Mat mask = cv::Mat(rect.height, rect.width, CV_8UC1);
+			mask.setTo(COLOR_BLACK);
+			cv::drawContours(mask, contours, i, COLOR_WHITE);
+
 			cv::goodFeaturesToTrack(grey(rect), corners,
 									maxCorners, qualityLevel,
-									minDistance, maskArray,
+									minDistance, mask,
 									blockSize, useHarrisDetector, k);
 			if(!corners.empty()){
 				Target target;

@@ -15,7 +15,7 @@ public:
 	typedef struct{
 		Densities density;
 		cv::Point point;
-		//cv::Point initial;
+		cv::Point initial;
 	} Feature;
 	typedef std::vector<Feature> Features;
 
