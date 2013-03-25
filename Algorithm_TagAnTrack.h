@@ -27,6 +27,12 @@ public:
         _mask=new Sub_BinaryMask();
     }
 
+	TagNTrack(cv::Size blurRange){
+		_tag=new Tagging(10,0.01,blurRange);
+		_track=new FeatureTracker();
+		_mask=new Sub_BinaryMask(blurRange);
+	}
+
     void process(const cv::Mat &input, cv::Mat &output){
         _mask->process(input,output);
         _tag->process(output,_out);

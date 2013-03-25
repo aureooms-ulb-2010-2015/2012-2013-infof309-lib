@@ -55,7 +55,8 @@ SOURCES += \
     Algorithm_EyeFaceDetector.cpp \
     Algorithm_Condensation.cpp \
     Algorithm_ColorDetection.cpp \
-    Algorithm_BinaryMaskWithOriginalFrame.cpp
+    Algorithm_BinaryMaskWithOriginalFrame.cpp \
+    BasicWindow.cpp
 
 HEADERS += \
     VideoStreamReader.h \
@@ -123,8 +124,8 @@ HEADERS += \
     Matcher_GreyLevelDistanceMatcher.h \
     Target_CondensationTargetV2.h \
     Algorithm_AccumulateBackground.h \
-    Algorithm_CondensationB.h
-
+    Algorithm_CondensationB.h\
+    BasicWindow.h
 
 
 unix:!symbian {

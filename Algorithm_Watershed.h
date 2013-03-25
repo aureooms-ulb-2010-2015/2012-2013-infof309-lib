@@ -28,17 +28,20 @@ private:
     cv::Rect _bndRect;
     cv::RNG rng;
 
+	cv::Size blurRange;
+
 
 public:
-    Watershed(const int mode = 0){
+	Watershed(const int mode = 0, cv::Size blurRange = cv::Size(16,16)){
         _mode = mode;
+		this->blurRange = blurRange;
     }
 
 
     void process(const cv::Mat &input, cv::Mat &output){
         // convert input frame to gray-level image and blur it
         cv::cvtColor(input, _gray, CV_BGR2GRAY);
-        cv::blur(_gray, _gray, cv::Size(16,16) );
+		cv::blur(_gray, _gray, blurRange );
         if(_bckgrnd.empty()){
             _gray.convertTo(_bckgrnd,CV_32F);
             _gray.convertTo(_mask, CV_8U);

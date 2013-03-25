@@ -3,6 +3,7 @@
 
 #include <QComboBox>
 #include "NetworkStreamInputDialog.h"
+#include <QKeyEvent>
 
 class InputChoiceWidget : public QComboBox{
 	Q_OBJECT
@@ -17,7 +18,7 @@ public:
 	QString getVideoFilePath();
 	virtual void showPopup();
     virtual void refreshDevices();
-
+	virtual void keyPressEvent(QKeyEvent *event);
 public slots:
 	void currentIndexChangedSLOT(int);
 
