@@ -74,7 +74,7 @@ private:
 	int TARGET_MIN_HEIGHT = 50;
 	int TARGET_MAX_WIDTH = 300;
 	int TARGET_MAX_HEIGHT = 300;
-	size_t MAX_DIST = 1000000;
+    size_t MAX_DIST = 1000;
 	Densities density;
 	Distances2D distances;
 	RefCounter refCounter;
@@ -227,11 +227,11 @@ private:
 
 				scores.insert(std::pair<Score, cv::Point>(distance, point));
 
-<<<<<<< HEAD
+
                 //cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
-=======
+
 				cv::circle(out, point, 3, cv::Scalar(0,0,255),-1);
->>>>>>> 96c7a51ac7e460a166aeaf4876a59e10a3ada594
+
 			}
 
 			for(size_t i = 0; i < refCounter.x.size(); ++i){
