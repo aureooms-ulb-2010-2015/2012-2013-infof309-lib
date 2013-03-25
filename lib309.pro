@@ -117,13 +117,13 @@ HEADERS += \
     Algorithm_ColorDetection.h \
     Algorithm_BinaryMaskWithOriginalFrame.h \
     Algorithm_CustomCondensationTemplateV1.h \
-    Algorithme_CondensationB.h \
     Algorithm_TaggingB.h \
     Algorithm_Sub_TaggingB.h \
     Algorithm_CustomCondensationTemplateV2.h \
     Matcher_GreyLevelDistanceMatcher.h \
     Target_CondensationTargetV2.h \
-    Algorithm_AccumulateBackground.h
+    Algorithm_AccumulateBackground.h \
+    Algorithm_CondensationB.h
 
 
 
