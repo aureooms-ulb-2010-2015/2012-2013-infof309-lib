@@ -21,6 +21,7 @@
 #include <map>
 #include <math.h>
 #include <algorithm>
+#include "CondensationParameters.h"
 
 template<typename M>
 class CustomCondensationTemplateV2: public CustomCondensation<M>{
@@ -72,21 +73,14 @@ public:
 
 private:
 
+	CondensationParameters parameters;
+
 	cv::Scalar COLOR_NEW_FEATURE =  cv::Scalar(0x98, 0x59, 0x3b);
 	cv::Scalar COLOR_WHITE = cv::Scalar::all(255);
 	cv::Scalar COLOR_BLACK = cv::Scalar(0,0,0);
 
 	Generator generator = Generator(Clock::now().time_since_epoch().count());
 	Targets currentlyTracked;
-	size_t pollingRange = 50;
-	size_t generatingRange = 1;
-	int spreadRange = 20;
-	//int minScore = 50;
-	int TARGET_MIN_WIDTH = 50; //should be at least 1 px and correspond to rect generator (eg tagging) results for no crash
-	int TARGET_MIN_HEIGHT = 50;
-	int TARGET_MAX_WIDTH = 300;
-	int TARGET_MAX_HEIGHT = 300;
-	size_t MAX_DIST = 200;
 	Densities density;
 	Distances2D distances;
 	RefCounter refCounter;
@@ -95,18 +89,11 @@ private:
 	Contours contours;
 	std::vector<cv::Vec4i> hierarchy;
 
-	int maxCorners = 30;
-	double qualityLevel = 0.01;
-	double minDistance = 10;
 	cv::InputArray maskArray = cv::noArray();
-	int blockSize = 3;
-	bool useHarrisDetector = false;
-	double k = 0.04;
 
 	cv::Mat grey;
 	cv::Mat grey_prev;
 
-	size_t MIN_ACCUMULATOR_ITERATIONS = 45;
 
 	size_t accumulatorIterations = 0;
 
@@ -120,7 +107,7 @@ public:
 
 		accumulator.process(in);
 		++accumulatorIterations;
-		if(accumulatorIterations < MIN_ACCUMULATOR_ITERATIONS) return;
+		if(accumulatorIterations < parameters.MIN_ACCUMULATOR_ITERATIONS) return;
 		cv::cvtColor(in, grey, CV_BGR2GRAY);
 
 		if(!grey_prev.empty()){
@@ -129,7 +116,7 @@ public:
 			}
 			this->removeLostTargets();
 			for(Target& target : currentlyTracked){
-				if(target.features.size() < maxCorners){
+				if(target.features.size() < parameters.maxCorners){
 					this->findNewFeatures(in, out, target);
 				}
 				this->filterFeatures(target);
@@ -137,13 +124,13 @@ public:
 			this->removeLostTargets();
 
 			for(Target& target : currentlyTracked){
-				if(target.features.size() < maxCorners){
+				if(target.features.size() < parameters.maxCorners){
 					this->findNewFeatures(in, out, target);
 				}
 			}
 		}
 
-		if(currentlyTracked.size() < generatingRange){
+		if(currentlyTracked.size() < parameters.generatingRange){
 			this->pollNewTargets(in,out);
 		}
 
@@ -241,9 +228,9 @@ private:
 
 		std::vector<cv::Point2f> corners;
 		cv::goodFeaturesToTrack(grey(roi), corners,
-								maxCorners - target.features.size(), qualityLevel,
-								minDistance, maskArray,
-								blockSize, useHarrisDetector, k);
+								parameters.maxCorners - target.features.size(), parameters.qualityLevel,
+								parameters.minDistance, maskArray,
+								parameters.blockSize, parameters.useHarrisDetector, parameters.k);
 		if(!corners.empty()){
 			Deltas deltas;
 			deltas.x = 0;
@@ -252,8 +239,8 @@ private:
 				corner.x += roi.x;
 				corner.y += roi.y;
 				this->initDensity(in);
-				density.x[corner.x] = MAX_DIST;
-				density.y[corner.y] = MAX_DIST;
+				density.x[corner.x] = parameters.MAX_DIST;
+				density.y[corner.y] = parameters.MAX_DIST;
 				spread(deltas);
 				Feature feature;
 				feature.point = feature.initial = corner;
@@ -276,10 +263,10 @@ private:
 
 		for(unsigned int i = 0; i < contours.size();){
 			Rect rect = cv::boundingRect(contours.at(i));
-			if(rect.width > TARGET_MAX_WIDTH
-					|| rect.width < TARGET_MIN_WIDTH
-					|| rect.height > TARGET_MAX_HEIGHT
-					|| rect.height < TARGET_MIN_HEIGHT){
+			if(rect.width > parameters.TARGET_MAX_WIDTH
+					|| rect.width < parameters.TARGET_MIN_WIDTH
+					|| rect.height > parameters.TARGET_MAX_HEIGHT
+					|| rect.height < parameters.TARGET_MIN_HEIGHT){
 				contours.erase(contours.begin()+i);
 				continue;
 			}
@@ -313,15 +300,15 @@ private:
 
 		Points result;
 		size_t rangeSize = (distributions.x.max() - distributions.x.min()) * (distributions.y.max() - distributions.y.min());
-		if (rangeSize <= pollingRange){
-			for(size_t x = distributions.x.min(); x < distributions.x.max(); ++x){
-				for(size_t y = distributions.y.min(); y < distributions.y.max(); ++y){
+		if (rangeSize <= parameters.pollingRange){
+			for(int x = distributions.x.min(); x < distributions.x.max(); ++x){
+				for(int y = distributions.y.min(); y < distributions.y.max(); ++y){
 					result.push_back(Point(x,y));
 				}
 			}
 			return result;
 		}
-		for(size_t i = 0; i < pollingRange; ++i){
+		for(size_t i = 0; i < parameters.pollingRange; ++i){
 			result.push_back(Point(distributions.x(generator),distributions.y(generator)));
 		}
 		return result;
@@ -412,14 +399,14 @@ private:
 	//				}
 	//			}
 
-				if (minDist > MAX_DIST){
+				if (minDist > parameters.MAX_DIST){
 					target.features.erase(target.features.begin()+i);
 					continue;
 				}
 
 				this->initDensity(in);
 				feature.point = bestCandidate;
-				density.x[feature.point.x] = density.y[feature.point.y] = MAX_DIST;
+				density.x[feature.point.x] = density.y[feature.point.y] = parameters.MAX_DIST;
 
 				Deltas deltas = this->shift(feature.density);
 				this->spread(deltas);
@@ -474,9 +461,9 @@ private:
 			cv::drawContours(mask, contours, i, COLOR_WHITE);
 
 			cv::goodFeaturesToTrack(grey(rect), corners,
-									maxCorners, qualityLevel,
-									minDistance, mask,
-									blockSize, useHarrisDetector, k);
+									parameters.maxCorners, parameters.qualityLevel,
+									parameters.minDistance, mask,
+									parameters.blockSize, parameters.useHarrisDetector, parameters.k);
 			if(!corners.empty()){
 				Target target;
 				target.features.reserve(corners.size());
@@ -484,8 +471,8 @@ private:
 					corner.x += rect.x;
 					corner.y += rect.y;
 					this->initDensity(in);
-					density.x[corner.x] = MAX_DIST;
-					density.y[corner.y] = MAX_DIST;
+					density.x[corner.x] = parameters.MAX_DIST;
+					density.y[corner.y] = parameters.MAX_DIST;
 					spread(deltas);
 					Feature feature;
 					feature.point /*= feature.initial*/ = corner;
@@ -510,8 +497,8 @@ private:
 	}
 
 	void spread(Deltas deltas){
-		spread(density.x, deltas.x, spreadRange);
-		spread(density.y, deltas.y, spreadRange);
+		spread(density.x, deltas.x, parameters.spreadRange);
+		spread(density.y, deltas.y, parameters.spreadRange);
 	}
 
 	Delta shift(Density& density, const Density& prevDensity){
