@@ -127,7 +127,10 @@ HEADERS += \
     Target_CondensationTargetV2.h \
     Algorithm_AccumulateBackground.h \
     BasicWindow.h \
-    CondensationParameters.h
+    CondensationParameters.h \
+    Algorithm_CustomCondensationTemplateV3.h \
+    Matcher_DistanceMatcher.h \
+    Target_CondensationTargetV3.h
 
 
 
