@@ -5,25 +5,26 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <algorithm>
+#include "Matcher_DistanceMatcher.h"
 
-#include "Target_CondensationTargetV2.h"
+class GreyLevelDistanceMatcher : public DistanceMatcher{
 
-template<int D>class GreyLevelDistanceMatcher{
+
 public:
-	typedef CondensationTargetV2 Target;
-	typedef size_t Distance;
-	GreyLevelDistanceMatcher(){}
+	typedef DistanceMatcher::Distance Distance;
+	GreyLevelDistanceMatcher(int radius):DistanceMatcher(radius){}
+
 	virtual ~GreyLevelDistanceMatcher() throw(){}
 	virtual Distance computeDistance(const cv::Mat& prev_img, const cv::Mat& img,const cv::Point& a, const cv::Point& b){
 		cv::Rect roi[2];
-		roi[0].x = std::max(a.x - D, 0);
-		roi[0].y = std::max(a.y - D, 0);
-		roi[0].width  = (a.x + D + 1 > img.cols)? D + img.cols - a.x : D*2+1;
-		roi[0].height = (a.y + D + 1> img.rows)? D + img.rows - a.y : D*2+1;
-		roi[1].x = std::max(b.x - D, 0);
-		roi[1].y = std::max(b.y - D, 0);
-		roi[1].width  = (b.x + D + 1> img.cols)? D + img.cols - b.x : D*2+1;
-		roi[1].height = (b.y + D + 1> img.rows)? D + img.rows - b.y : D*2+1;
+		roi[0].x = std::max(a.x - R, 0);
+		roi[0].y = std::max(a.y - R, 0);
+		roi[0].width  = (a.x + R + 1 > img.cols)? R + img.cols - a.x : R*2+1;
+		roi[0].height = (a.y + R + 1> img.rows)? R + img.rows - a.y : R*2+1;
+		roi[1].x = std::max(b.x - R, 0);
+		roi[1].y = std::max(b.y - R, 0);
+		roi[1].width  = (b.x + R + 1> img.cols)? R + img.cols - b.x : R*2+1;
+		roi[1].height = (b.y + R + 1> img.rows)? R + img.rows - b.y : R*2+1;
 
 		roi[0].width  =  roi[1].width = std::min( roi[0].width,  roi[1].width);
 		roi[0].height = roi[1].height = std::min(roi[0].height, roi[1].height);

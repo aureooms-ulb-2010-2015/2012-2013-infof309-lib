@@ -56,7 +56,8 @@ SOURCES += \
     Algorithm_Condensation.cpp \
     Algorithm_ColorDetection.cpp \
     Algorithm_BinaryMaskWithOriginalFrame.cpp \
-    BasicWindow.cpp
+    BasicWindow.cpp \
+    CondensationParameters.cpp
 
 HEADERS += \
     VideoStreamReader.h \
@@ -118,15 +119,18 @@ HEADERS += \
     Algorithm_ColorDetection.h \
     Algorithm_BinaryMaskWithOriginalFrame.h \
     Algorithm_CustomCondensationTemplateV1.h \
-    Algorithme_CondensationB.h \
     Algorithm_TaggingB.h \
     Algorithm_Sub_TaggingB.h \
     Algorithm_CustomCondensationTemplateV2.h \
     Matcher_GreyLevelDistanceMatcher.h \
     Target_CondensationTargetV2.h \
     Algorithm_AccumulateBackground.h \
-    BasicWindow.h
-
+    Algorithm_CondensationB.h\
+    BasicWindow.h \
+    CondensationParameters.h \
+    Algorithm_CustomCondensationTemplateV3.h \
+    Matcher_DistanceMatcher.h \
+    Target_CondensationTargetV3.h
 
 
 unix:!symbian {
