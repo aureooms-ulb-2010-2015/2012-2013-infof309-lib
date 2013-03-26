@@ -1,5 +1,5 @@
-#ifndef ALGORITHM_CUSTOMCONDENSATIONTEMPLATEV2_H
-#define ALGORITHM_CUSTOMCONDENSATIONTEMPLATEV2_H
+#ifndef ALGORITHM_CUSTOMCONDENSATIONTEMPLATEV3_H
+#define ALGORITHM_CUSTOMCONDENSATIONTEMPLATEV3_H
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -16,11 +16,11 @@
 #include <algorithm>
 
 #include "CondensationParameters.h"
-#include "Target_CondensationTargetV2.h"
 #include "Algorithm_AccumulateBackground.h"
 #include "FrameProcessor.h"
+#include "Target_CondensationTargetV3.h"
 
-class CustomCondensationTemplateV2: public FrameProcessor{
+class CustomCondensationTemplateV3: public FrameProcessor{
 
 public:
 
@@ -29,24 +29,23 @@ public:
 	typedef std::vector<Point> Points;
 	typedef cv::Rect Rect;
 	typedef std::vector<Rect> Rects;
-	typedef CondensationTargetV2 Target;
+	typedef CondensationTargetV3 Target;
 	typedef DistanceMatcher::Distance Distance;
 	typedef std::vector<Distance> Distances;
 	typedef struct{
 		Distances x;
 		Distances y;
 	} Distances2D;
-	typedef Target::Score Score;
 	typedef Target::Density Density;
 	typedef Target::Densities Densities;
 	typedef Target::Feature Feature;
 	typedef Target::Features Features;
 	typedef std::vector<Target> Targets;
-	typedef std::discrete_distribution<int> DiscreteDistribution;
+	typedef std::normal_distribution<float> NormalDistribution;
 	typedef struct{
-		DiscreteDistribution x;
-		DiscreteDistribution y;
-	} DiscreteDistributions;
+		NormalDistribution x;
+		NormalDistribution y;
+	} NormalDistributions;
 
 	typedef std::default_random_engine Generator;
 	typedef int Delta;
@@ -96,7 +95,7 @@ private:
 
 public:
 
-	CustomCondensationTemplateV2(){}
+	CustomCondensationTemplateV3(){}
 
 	void process(const cv::Mat &in, cv::Mat &out){
 		out = in.clone();
@@ -127,7 +126,7 @@ public:
 		}
 
 		if(currentlyTracked.size() < parameters.generatingRange){
-			this->pollNewTargets(in,out);
+			this->pollNewTargets(out);
 		}
 
 		for(const Target& target : currentlyTracked){
@@ -234,9 +233,8 @@ private:
 			for(Point corner : corners){
 				corner.x += roi.x;
 				corner.y += roi.y;
-				this->initDensity(in);
-				density.x[corner.x] = parameters.MAX_DIST;
-				density.y[corner.y] = parameters.MAX_DIST;
+				density.x.mean = corner.x;
+				density.y.mean = corner.y;
 				spread(deltas);
 				Feature feature;
 				feature.point = feature.initial = corner;
@@ -292,10 +290,10 @@ private:
 		}
 	}
 
-	Points generatePoints(DiscreteDistributions &distributions){
+	Points generatePoints(const cv::Mat& in, NormalDistributions &distributions){
 
 		Points result;
-		size_t rangeSize = (distributions.x.max() - distributions.x.min()) * (distributions.y.max() - distributions.y.min());
+		/*size_t rangeSize = (distributions.x.max() - distributions.x.min()) * (distributions.y.max() - distributions.y.min());
 		if (rangeSize <= parameters.pollingRange){
 			for(int x = distributions.x.min(); x < distributions.x.max(); ++x){
 				for(int y = distributions.y.min(); y < distributions.y.max(); ++y){
@@ -303,62 +301,37 @@ private:
 				}
 			}
 			return result;
-		}
+		}*/
+		int x, y;
 		for(size_t i = 0; i < parameters.pollingRange; ++i){
-			result.push_back(Point(distributions.x(generator),distributions.y(generator)));
+			x = distributions.x(generator);
+			y = distributions.y(generator);
+			x = std::max(0, std::min(in.cols - 1, x));
+			y = std::max(0, std::min(in.rows - 1, y));
+			result.push_back(Point(x,y));
 		}
 		return result;
 	}
 
-	void initDensity(const cv::Mat& in){
-		density.x.clear();
-		density.y.clear();
-		density.x.resize(in.cols, 0);
-		density.y.resize(in.rows, 0);
-	}
-
-	void initDistances(const cv::Mat& in){
-		distances.x.clear();
-		distances.y.clear();
-		distances.x.resize(in.cols, 0);
-		distances.y.resize(in.rows, 0);
-	}
-
-	void initRefCounter(const cv::Mat& in){
-		refCounter.x.clear();
-		refCounter.y.clear();
-		refCounter.x.resize(in.cols, 0);
-		refCounter.y.resize(in.rows, 0);
-	}
-
-	void ConDensAte(const cv::Mat &in, cv::Mat &out, Target& target){
+	void ConDensAte(const cv::Mat& in, cv::Mat &out, Target& target){
 
 		for(size_t i = 0; i < target.features.size();){
 			Feature& feature = target.features.at(i);
-//			this->initDensity(in);
-//			this->initDistances(in);
-			DiscreteDistributions distributions = {
-				DiscreteDistribution(feature.density.x.begin(), feature.density.x.end()),
-				DiscreteDistribution(feature.density.y.begin(), feature.density.y.end())
+			NormalDistributions distributions = {
+				NormalDistribution(feature.density.x.mean, feature.density.x.deviation),
+				NormalDistribution(feature.density.y.mean, feature.density.y.deviation)
 			};
 
-			Points points = generatePoints(distributions);
+			Points points = generatePoints(in, distributions);
 			if(!points.empty()){
-	//			std::map<Score, cv::Point> scores;
 				Points::iterator point = points.begin();
 				cv::Point bestCandidate = *point;
 				Distance minDist = parameters.matcher->computeDistance(grey_prev, grey, feature.point, bestCandidate);
-	//			this->initRefCounter(in);
 
 				for(++point; point != points.end(); ++point){
 
 					Distance distance = parameters.matcher->computeDistance(grey_prev, grey, feature.point, *point);
-	//				++refCounter.x[point.x];
-	//				++refCounter.y[point.y];
-	//				distances.x[point.x] += distance;
-	//				distances.y[point.y] += distance;
 
-	//				scores.insert(std::pair<Score, cv::Point>(distance, point));
 					if(distance < minDist){
 						bestCandidate = *point;
 						minDist = distance;
@@ -371,38 +344,14 @@ private:
 					cv::circle(out, *point, 3, cv::Scalar(0,0,255),-1);
 				}
 
-	//			for(size_t i = 0; i < refCounter.x.size(); ++i){
-	//				if(refCounter.x[i] > 1){
-	//					distances.x[i] /= refCounter.x[i];
-	//				}
-	//			}
-
-	//			for(size_t i = 0; i < refCounter.y.size(); ++i){
-	//				if(refCounter.y[i] > 1){
-	//					distances.y[i] /= refCounter.y[i];
-	//				}
-	//			}
-
-	//			for(size_t i = 0; i < distances.x.size(); ++i){
-	//				if(refCounter.x[i] > 0){
-	//					density.x[i] = (distances.x[i] >= MAX_DIST)? 0 : MAX_DIST - distances.x[i];
-	//				}
-	//			}
-
-	//			for(size_t i = 0; i < distances.y.size(); ++i){
-	//				if(refCounter.y[i] > 0){
-	//					density.y[i] = (distances.y[i] >= MAX_DIST)? 0 : MAX_DIST - distances.y[i];
-	//				}
-	//			}
-
 				if (minDist > parameters.MAX_DIST){
 					target.features.erase(target.features.begin()+i);
 					continue;
 				}
 
-				this->initDensity(in);
 				feature.point = bestCandidate;
-				density.x[feature.point.x] = density.y[feature.point.y] = parameters.MAX_DIST;
+				density.x.mean = feature.point.x;
+				density.y.mean = feature.point.y;
 
 				Deltas deltas = this->shift(feature.density);
 				this->spread(deltas);
@@ -433,7 +382,7 @@ private:
 		}
 	}
 
-	void pollNewTargets(const cv::Mat &in, cv::Mat &out){
+	void pollNewTargets(cv::Mat &out){
 
 
 		Rects rects = getMovingObjects(); //stored in contour
@@ -466,9 +415,8 @@ private:
 				for(Point corner : corners){
 					corner.x += rect.x;
 					corner.y += rect.y;
-					this->initDensity(in);
-					density.x[corner.x] = parameters.MAX_DIST;
-					density.y[corner.y] = parameters.MAX_DIST;
+					density.x.mean = corner.x;
+					density.y.mean = corner.y;
 					spread(deltas);
 					Feature feature;
 					feature.point /*= feature.initial*/ = corner;
@@ -498,65 +446,16 @@ private:
 	}
 
 	Delta shift(Density& density, const Density& prevDensity){
-
-		std::pair<size_t, int> prevMax(0,~0);
-		size_t j = 0;
-		for(int i : prevDensity){
-			if(prevMax.second < i){
-				prevMax.first = j;
-				prevMax.second = i;
-			}
-			++j;
-		}
-
-		std::pair<size_t, int> max(0,~0);
-		j = 0;
-		for(int i : density){
-			if(max.second < i){
-				max.first = j;
-				max.second = i;
-			}
-			++j;
-		}
-
-		Delta delta = max.first > prevMax.first ? max.first - prevMax.first : -(prevMax.first - max.first);
-
-		if(delta != 0){
-			Density temp;
-			if(delta > 0){
-				temp.resize(delta, 0);
-				temp.insert(temp.end(), density.begin(), density.end()-delta);
-			}
-			else{
-				temp.assign(density.begin()-delta, density.end());
-				temp.resize(density.size(), 0);
-			}
-			density = temp;
-		}
-
+		Delta delta = density.mean - prevDensity.mean;
+		density.mean += delta;
 		return delta;
 	}
 
 	void spread(Density& density, Delta delta, int spreadRange){
-		Density temp;
-		size_t blurRange = abs(delta) + spreadRange;
-		int size = density.size();
-		for(size_t d = 0; d < blurRange; ++d){
-			temp = density;
-			for(int i = 0; i < size; ++i){
-				int val = 0;
-				int k = 0;
-				int begin = std::max(0,i-1);
-				int end = std::min(size,i+2);
-				for(int j = begin; j < end; ++j, ++k){
-					val += temp[j];
-				}
-				if(k > 0) density[i] = val/k;
-			}
-		}
+		density.deviation = abs(delta) + spreadRange;
 	}
 
 
 
 };
-#endif // ALGORITHM_CUSTOMCONDENSATIONTEMPLATEV2_H
+#endif // ALGORITHM_CUSTOMCONDENSATIONTEMPLATEV3_H
