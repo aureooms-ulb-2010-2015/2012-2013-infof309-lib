@@ -67,9 +67,10 @@ public:
 	typedef std::vector<cv::Point> Contour;
 	typedef std::vector<Contour> Contours;
 
-private:
 
 	CondensationParameters parameters;
+
+private:
 
 	cv::Scalar COLOR_NEW_FEATURE =  cv::Scalar(0x98, 0x59, 0x3b);
 	cv::Scalar COLOR_WHITE = cv::Scalar::all(255);
