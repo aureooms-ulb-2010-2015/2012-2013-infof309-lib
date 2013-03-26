@@ -2,6 +2,7 @@
 #define CONDENSATIONPARAMETERS_H
 
 #include <cstring>
+#include <memory>
 #include "Matcher_DistanceMatcher.h"
 #include "Matcher_GreyLevelDistanceMatcher.h"
 
@@ -23,7 +24,7 @@ public:
 	bool useHarrisDetector = false;
 	double k = 0.04;
 	size_t MIN_ACCUMULATOR_ITERATIONS = 45;
-	DistanceMatcher* matcher = new GreyLevelDistanceMatcher(6);
+    std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GreyLevelDistanceMatcher(6));
 
 	CondensationParameters();
 };
