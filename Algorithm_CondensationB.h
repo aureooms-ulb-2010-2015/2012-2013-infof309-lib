@@ -158,7 +158,6 @@ public:
 
 
 
-
 };
 
 #endif // ALGORITHM_CondensationB_H
