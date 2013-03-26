@@ -77,20 +77,7 @@ private:
 
 	Generator generator = Generator(Clock::now().time_since_epoch().count());
 	Targets currentlyTracked;
-<<<<<<< HEAD
-	size_t pollingRange = 50;
-	size_t generatingRange = 1;
-    int spreadRange = 5;
-	//int minScore = 50;
-	int TARGET_MIN_WIDTH = 50; //should be at least 1 px and correspond to rect generator (eg tagging) results for no crash
-	int TARGET_MIN_HEIGHT = 50;
-	int TARGET_MAX_WIDTH = 300;
-	int TARGET_MAX_HEIGHT = 300;
 
-    size_t MAX_DIST = 1000;
-
-=======
->>>>>>> 90508869e9fad7c2187c55fc6b62115868de38c3
 	Densities density;
 	Distances2D distances;
 	RefCounter refCounter;
