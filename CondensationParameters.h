@@ -26,6 +26,7 @@ public:
 	double k = 0.04;
 	size_t MIN_ACCUMULATOR_ITERATIONS = 45;
 	unsigned int R = 6;
+	int matcherIndex = 0;
 	std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GreyLevelDistanceMatcher(R));
 	//std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GradientDistanceMatcher(R));
 
