@@ -320,35 +320,87 @@ private:
 				NormalDistribution(feature.density.x.mean, feature.density.x.deviation),
 				NormalDistribution(feature.density.y.mean, feature.density.y.deviation)
 			};
+			std::map<Distance, cv::Point> bestCandidates;
+			for(int k = 0; k < parameters.resamplingPasses; ++k){
+				Points points = generatePoints(in, distributions);
 
-			Points points = generatePoints(in, distributions);
-			if(!points.empty()){
+				if(points.empty()) break;
+
 				Points::iterator point = points.begin();
-				cv::Point bestCandidate = *point;
-				Distance minDist = parameters.matcher->computeDistance(grey_prev, grey, feature.point, bestCandidate);
-
-				for(++point; point != points.end(); ++point){
-
+				for(int b = 0; b < parameters.resamplingRange && point != points.end(); ++b){
 					Distance distance = parameters.matcher->computeDistance(grey_prev, grey, feature.point, *point);
-
-					if(distance < minDist){
-						bestCandidate = *point;
-						minDist = distance;
-						if(minDist == 0){
-							cv::circle(out, *point, 3, cv::Scalar(0x3b, 0x59, 0x98),-1);
-							break;
-						}
+					bestCandidates.insert(std::pair<Distance, cv::Point>(distance, *point));
+					if(distance == 0){
+						cv::circle(out, *point, 3, cv::Scalar(0x3b, 0x59, 0x98),-1);
+						break;
 					}
+					++point;
+				}
+				if(bestCandidates.begin()->first != 0){
+					for(; point != points.end(); ++point){
 
-					cv::circle(out, *point, 3, cv::Scalar(0,0,255),-1);
+						Distance distance = parameters.matcher->computeDistance(grey_prev, grey, feature.point, *point);
+
+						if(distance < bestCandidates.rbegin()->first){
+							bestCandidates.erase(--bestCandidates.end());
+							bestCandidates.insert(std::pair<Distance, cv::Point>(distance, *point));
+							if(distance == 0){
+								cv::circle(out, *point, 3, cv::Scalar(0x3b, 0x59, 0x98),-1);
+								break;
+							}
+						}
+
+						cv::circle(out, *point, 3, cv::Scalar(0,0,255),-1);
+					}
+				}
+				else{
+					break;
 				}
 
-				if (minDist > parameters.MAX_DIST){
+				if(bestCandidates.begin()->first == 0) break;
+
+				if(k+1 < parameters.resamplingPasses){
+
+					double mean[2] = {0,0};
+					double deviation[2] = {0,0};
+					int ech = 0;
+					for(std::map<Distance, cv::Point>::iterator b = bestCandidates.begin(); b != bestCandidates.end(); ++b){
+						mean[0] += b->second.x;
+						mean[1] += b->second.y;
+						++ech;
+					}
+
+					mean[0] /= ech;
+					mean[1] /= ech;
+
+
+					for(std::map<Distance, cv::Point>::iterator b = bestCandidates.begin(); b != bestCandidates.end(); ++b){
+						double temp;
+						temp = b->second.x - mean[0];
+						deviation[0] += temp*temp;
+						temp = b->second.y - mean[1];
+						deviation[1] += temp*temp;
+					}
+
+					deviation[0] /= ech;
+					deviation[1] /= ech;
+					deviation[0] = sqrt(deviation[0]);
+					deviation[1] = sqrt(deviation[1]);
+
+					distributions = {
+						NormalDistribution(mean[0], deviation[0]),
+						NormalDistribution(mean[1], deviation[1])
+					};
+				}
+			}
+
+			if(!bestCandidates.empty()){
+				if (bestCandidates.begin()->first > parameters.MAX_DIST){
 					target.features.erase(target.features.begin()+i);
 					continue;
 				}
 
-				feature.point = bestCandidate;
+				feature.point = bestCandidates.begin()->second;
 				density.x.mean = feature.point.x;
 				density.y.mean = feature.point.y;
 
