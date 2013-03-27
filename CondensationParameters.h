@@ -35,6 +35,9 @@ public:
 	int TRUST_MALUS = 1;
 	size_t MIN_FEATURES = 5;
 
+	int resamplingPasses = 5;
+	int resamplingRange = 30;
+
 	CondensationParameters();
 };
 
