@@ -111,18 +111,18 @@ public:
 			}
 			this->removeLostTargets();
 			for(Target& target : currentlyTracked){
-				if(target.features.size() < parameters.maxCorners){
-					this->findNewFeatures(in, out, target);
-				}
+//				if(target.features.size() < parameters.maxCorners){
+//					this->findNewFeatures(in, out, target);
+//				}
 				this->filterFeatures(target);
 			}
 			this->removeLostTargets();
 
-			for(Target& target : currentlyTracked){
-				if(target.features.size() < parameters.maxCorners){
-					this->findNewFeatures(in, out, target);
-				}
-			}
+//			for(Target& target : currentlyTracked){
+//				if(target.features.size() < parameters.maxCorners){
+//					this->findNewFeatures(in, out, target);
+//				}
+//			}
 		}
 
 		if(currentlyTracked.size() < parameters.generatingRange){
@@ -132,7 +132,7 @@ public:
 		for(const Target& target : currentlyTracked){
 			drawTarget(out, target);
 		}
-		//swap buffers
+
 		cv::swap(grey_prev, grey);
 		return;
 	}
@@ -142,7 +142,7 @@ private:
 
 	void removeLostTargets(){
 		for(size_t i = 0; i < currentlyTracked.size();){
-			if(currentlyTracked.at(i).features.empty()){
+			if(currentlyTracked.at(i).features.size() < parameters.MIN_FEATURES){
 				currentlyTracked.erase(currentlyTracked.begin()+i);
 			}
 			else{
@@ -251,7 +251,6 @@ private:
 						 contours,
 						 hierarchy,
 						 CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0, 0) );
-
 
 		Rects rects;
 
@@ -366,20 +365,39 @@ private:
 	}
 
 	void filterFeatures(Target& target){
-		Gaussian gaussian = computeShiftGaussian(target);
+//		Gaussian gaussian = computeShiftGaussian(target);
 
-		int delta[2] = {0,0};
+//		int delta[2] = {0,0};
 
+//		for(size_t i = 0; i < target.features.size();){
+//			delta[0] = abs((target.features.at(i).point.x - target.features.at(i).initial.x) - gaussian.mean[0]);
+//			delta[1] = abs((target.features.at(i).point.y - target.features.at(i).initial.y) - gaussian.mean[1]);
+//			if(delta[0] > gaussian.deviation[0]*2 || delta[1] > gaussian.deviation[1]*2){
+//				target.features.erase(target.features.begin()+i);
+//			}
+//			else{
+//				++i;
+//			}
+//		}
 		for(size_t i = 0; i < target.features.size();){
-			delta[0] = abs((target.features.at(i).point.x - target.features.at(i).initial.x) - gaussian.mean[0]);
-			delta[1] = abs((target.features.at(i).point.y - target.features.at(i).initial.y) - gaussian.mean[1]);
-			if(delta[0] > gaussian.deviation[0]*2 || delta[1] > gaussian.deviation[1]*2){
+			int a, b;
+			a = abs(target.features.at(i).point.x - target.features.at(i).previous.x);
+			b = abs(target.features.at(i).point.y - target.features.at(i).previous.y);
+			if(a > 0 || b > 0){
+				target.features.at(i).trust += (a+b)*parameters.TRUST_BONUS_FACTOR;
+			}
+			else{
+				target.features.at(i).trust -= parameters.TRUST_MALUS;
+			}
+			if(target.features.at(i).trust <= parameters.TRUST_DIE){
 				target.features.erase(target.features.begin()+i);
 			}
 			else{
+				target.features.at(i).previous = target.features.at(i).point;
 				++i;
 			}
 		}
+
 	}
 
 	void pollNewTargets(cv::Mat &out){
@@ -403,7 +421,13 @@ private:
 
 			cv::Mat mask = cv::Mat(rect.height, rect.width, CV_8UC1);
 			mask.setTo(COLOR_BLACK);
-			cv::drawContours(mask, contours, i, COLOR_WHITE);
+			const cv::Point* poly_contours[1];
+			poly_contours[0] = contours[i].data();
+			int poly_contours_n[1];
+			poly_contours_n[0] = contours[i].size();
+
+			//cv::drawContours(mask, contours, i, COLOR_WHITE);
+			cv::fillPoly(mask, poly_contours, poly_contours_n, 1, COLOR_WHITE);
 
 			cv::goodFeaturesToTrack(grey(rect), corners,
 									parameters.maxCorners, parameters.qualityLevel,
@@ -419,8 +443,9 @@ private:
 					density.y.mean = corner.y;
 					spread(deltas);
 					Feature feature;
-					feature.point /*= feature.initial*/ = corner;
+					feature.point = feature.initial = feature.previous =  corner;
 					feature.density = density;
+					feature.trust = parameters.TRUST_START;
 					target.features.push_back(feature);
 					cv::circle(out, feature.point, 3, color,-1);
 				}

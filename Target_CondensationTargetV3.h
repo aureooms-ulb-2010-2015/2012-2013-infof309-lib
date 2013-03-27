@@ -19,6 +19,8 @@ public:
 		Densities density;
 		cv::Point point;
 		cv::Point initial;
+		int trust;
+		cv::Point previous;
 	} Feature;
 	typedef std::vector<Feature> Features;
 

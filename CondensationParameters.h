@@ -28,7 +28,12 @@ public:
 	unsigned int R = 6;
 	int matcherIndex = 0;
 	std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GreyLevelDistanceMatcher(R));
-	//std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GradientDistanceMatcher(R));
+
+	int TRUST_START = 100;
+	int TRUST_DIE = 0;
+	int TRUST_BONUS_FACTOR = 10;
+	int TRUST_MALUS = 1;
+	size_t MIN_FEATURES = 5;
 
 	CondensationParameters();
 };
