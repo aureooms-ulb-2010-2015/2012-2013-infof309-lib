@@ -5,6 +5,7 @@
 #include <memory>
 #include "Matcher_DistanceMatcher.h"
 #include "Matcher_GreyLevelDistanceMatcher.h"
+#include "Matcher_GradientDistanceMatcher.h"
 
 class CondensationParameters{
 public:
@@ -24,7 +25,9 @@ public:
 	bool useHarrisDetector = false;
 	double k = 0.04;
 	size_t MIN_ACCUMULATOR_ITERATIONS = 45;
-    std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GreyLevelDistanceMatcher(6));
+	unsigned int R = 6;
+	std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GreyLevelDistanceMatcher(R));
+	//std::shared_ptr<DistanceMatcher> matcher = std::shared_ptr<DistanceMatcher>(new GradientDistanceMatcher(R));
 
 	CondensationParameters();
 };
