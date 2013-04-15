@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<parameters>
+    <pollingRange value="50"/>
+    <generatingRange value="1"/>
+    <spreadRange value="5"/>
+    <TARGET_MIN_WIDTH value="50"/>
+    <TARGET_MIN_HEIGHT value="50"/>
+    <TARGET_MAX_WIDTH value="300"/>
+    <TARGET_MAX_HEIGHT value="300"/>
+    <MAX_DIST value="137"/>
+    <maxCorners value="30"/>
+    <qualityLevel value="0.01"/>
+    <minDistance value="10"/>
+    <blockSize value="3"/>
+    <useHarrisDetector value="0"/>
+    <k value="0.04"/>
+    <MIN_ACCUMULATOR_ITERATIONS value="45"/>
+    <R value="9"/>
+    <matcherIndex value="0"/>
+    <TRUST_START value="100"/>
+    <TRUST_DIE value="0"/>
+    <TRUST_BONUS_FACTOR value="1"/>
+    <TRUST_MALUS value="1000"/>
+    <MIN_FEATURES value="5"/>
+    <resamplingPasses value="5"/>
+    <resamplingRange value="20"/>
+</parameters>

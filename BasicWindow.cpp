@@ -105,8 +105,9 @@ void BasicWindow::requestChangeSourceSLOT(QString filename){
 }
 
 void BasicWindow::sourceReady(){
-	delete this->_frameProcessor;
+	FrameProcessor* temp = this->_frameProcessor;
 	this->_frameProcessor = this->generateProcessor();
+	delete temp;
 	this->_streamProcessor->reset(this->_streamReader, this->_frameProcessor);
 	this->_streamInfo = this->_streamReader->getSourceInfo();
 	int totalTime = 0, elapsedTime = 0;
